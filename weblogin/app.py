@@ -19,6 +19,15 @@ from . import userdata
 # sqlite database will be created with the single user 'admin' and password 'password!'
 # You should immediately log in as this user and change the password.
 
+
+
+# location of static files
+STATICFILES = Path(__file__).parent.resolve() / "static"
+
+# location of template files
+TEMPLATEFILES = Path(__file__).parent.resolve() / "templates"
+
+
 class LoggedInAuth(AbstractAuthenticationMiddleware):
     """Checks if a logged-in cookie is present, and verifies it
        If ok, returns an AuthenticationResult with the user, and the users
@@ -123,12 +132,12 @@ app = Litestar(
                     login,
                     logout,
                     members,
-                    create_static_files_router(path="/static", directories=["weblogin/static"]),
+                    create_static_files_router(path="/static", directories=[STATICFILES]),
                    ],
     exception_handlers={ NotAuthorizedException: gotologin_error_handler},
     plugins=[HTMXPlugin()],
     middleware=[auth_mw],
-    template_config=TemplateConfig(directory=Path("weblogin/templates"),
+    template_config=TemplateConfig(directory=Path(TEMPLATEFILES),
                                    engine=MakoTemplateEngine,
                                   ),
     )

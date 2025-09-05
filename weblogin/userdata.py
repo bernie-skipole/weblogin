@@ -1,4 +1,8 @@
-# This module creates a user database
+"""This module defines users and password on a database,
+   on first being imported if the file users.sqlite does not exist, an
+   sqlite database will be created with the single user 'admin' and password 'password!'
+   You should immediately log in as this user and change the password.
+   """
 
 import sqlite3, os, time, asyncio
 
@@ -74,6 +78,7 @@ async def checkuserpassword(user:str, password:str) -> str|None:
         return
     # encode the received password, and compare it with the value in the database
     storedpassword, auth, salt = result
+    # hash the received password to compare it with the encoded password
     receivedpassword = scrypt( password = password.encode(),
                                salt = salt,
                                n = 2048,
@@ -93,7 +98,7 @@ async def checkuserpassword(user:str, password:str) -> str|None:
     return randomstring
 
 
-def cleanusercookies():
+def cleanusercookies() -> None:
     "Every time someone logs in, remove any expired cookies from USERCOOKIES"
     now = time.time()
     for cookie in list(USERCOOKIES.keys()):
@@ -105,20 +110,17 @@ def cleanusercookies():
 
 def verify(cookie:str) -> tuple[str, str]|None:
     "Return (username, auth), or None on failure"
-    try:
-        if cookie not in USERCOOKIES:
-            return
-        t, user, auth = USERCOOKIES[cookie]
-        now = time.time()
-        if now-t > IDLETIMEOUT:
-            # log the user out, as IDLETIMEOUT inactivity has passed
-            del USERCOOKIES[cookie]
-            return
-        # success, update the time
-        USERCOOKIES[cookie] = (now, user, auth)
-        return user, auth
-    except Exception as e:
-        pass
+    if cookie not in USERCOOKIES:
+        return
+    t, user, auth = USERCOOKIES[cookie]
+    now = time.time()
+    if now-t > IDLETIMEOUT:
+        # log the user out, as IDLETIMEOUT inactivity has passed
+        del USERCOOKIES[cookie]
+        return
+    # success, update the time
+    USERCOOKIES[cookie] = (now, user, auth)
+    return user, auth
 
 
 def logout(user:str) -> None:
