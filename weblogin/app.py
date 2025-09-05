@@ -21,7 +21,7 @@ from . import userdata
 
 
 
-# location of static files
+# location of static files, for CSS and javascript
 STATICFILES = Path(__file__).parent.resolve() / "static"
 
 # location of template files
@@ -54,8 +54,8 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
 
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
     """If a NotAuthorizedException is raised, this handles it, and redirects
-       the caller to the main public page"""
-    return Redirect("/")
+       the caller to the login page"""
+    return Redirect("/login")
 
 
 # This defines LoggedInAuth as middleware and also
@@ -105,6 +105,18 @@ async def login(request: Request) -> Template|ClientRedirect:
     return response
 
 
+@get("/edit")
+async def edit(request: Request[str, str, State]) -> Template:
+    """This allows a user to edit his/her password, or delete themself from the system
+       If the user is an admin user, further facilities to add/delete/reset other users
+       are available"""
+    user = request.user
+    auth = request.auth
+    # if auth == "User":
+    # return a template allowing password change
+    return Template(template_name="useredit.html", context={"user": user})
+
+
 @get("/members")
 async def members(request: Request[str, str, State]) -> Template:
     """The main application page, this has cookies automatically checked by
@@ -131,6 +143,7 @@ app = Litestar(
                     login_page,
                     login,
                     logout,
+                    edit,
                     members,
                     create_static_files_router(path="/static", directories=[STATICFILES]),
                    ],

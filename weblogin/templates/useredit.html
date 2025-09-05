@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Set Password</title>
     <style>
     html, body {
       height: 100%;
@@ -14,31 +14,25 @@
     <link rel="stylesheet" href="/static/w3-colors-flat.css">
     <script src="/static/htmx.min.js"></script>
 </head>
-<body">
+<body class="w3-flat-clouds">
     <div class="w3-display-container w3-flat-clouds" style="height:100%">
       <header class="w3-container w3-display-topleft w3-flat-silver w3-block">
         <p class="w3-margin-right w3-left"><a href="/" class="w3-button w3-black w3-ripple w3-round w3-medium">Site Root</a></p>
         <h1>Site title - edit the template to set this</h1>
       </header>
-      <footer class="w3-container w3-display-bottomleft w3-flat-silver w3-block">
-        <h5>Cookies</h5>
-        <p>This site only uses strictly necessary cookies for its operation. If you do not wish to accept any cookies, please do not log in.</p>
-      </footer>
       <div class="w3-container w3-card w3-display-middle" style="width:80%;max-width:400px">
+        <p>For user: ${user | h}</p>
+        <p>Change password:</p>
         <form hx-post="/login" hx-target="#result" hx-swap="outerHTML">
-            <p>
-            <label for="username">Username:</label>
-            <input class="w3-input" type="text" id="username" name="username" required /></p>
-            <p>
-            <label for="password">Password:</label>
-            <input class="w3-input" type="password" id="password" name="password" required /></p>
-            <p class="w3-center">
-               <button class="w3-button w3-black w3-ripple w3-round" type="submit">Login</button>
-            </p>
+         <p><label for="password1">New Password:</label>
+          <input class="w3-input" type="password" id="password1" name="password1" required /></p>
+         <p><label for="password2">New Password again:</label>
+          <input class="w3-input" type="password" id="password2" name="password2" required /></p>
+         <p class="w3-center">
+           <button class="w3-button w3-black w3-ripple w3-round" type="submit">Submit</button></p>
         </form>
-        <p id="result">Please login to continue</p>
+        <p id="result">Please set a new password</p>
       </div>
-
     </div>
 
 </body>
