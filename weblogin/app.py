@@ -97,7 +97,7 @@ async def login(request: Request) -> Template|ClientRedirect:
         # returns an 'Invalid' template which the htmx javascript
         # puts in the right place on the login page
         return HTMXTemplate(None,
-                            template_str="<p id=\"result\" class=\"w3-animate-right\">Invalid</p>")
+                            template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid</p>")
     # The user checks out ok, set redirect to the members page,
     # with the loggedincookie
     response =  ClientRedirect("/members")
