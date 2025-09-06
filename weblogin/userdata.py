@@ -4,7 +4,7 @@
    You should immediately log in as this user and change the password.
    """
 
-import sqlite3, os, time, asyncio
+import sqlite3, os, time, asyncio, re
 
 from hashlib import scrypt
 
@@ -43,8 +43,9 @@ if not USERDBASE.is_file():
                                dklen=64)
 
     con = sqlite3.connect(USERDBASE)
+
     with con:
-        con.execute("CREATE TABLE users(name, password, auth, salt)")
+        con.execute("CREATE TABLE users(name VARCHAR UNIQUE, password, auth, salt)")
         con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt)",
               {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt})
     con.close()
@@ -129,3 +130,38 @@ def logout(user:str) -> None:
         t, loggedinuser, auth = USERCOOKIES[cookie]
         if user == loggedinuser:
             del USERCOOKIES[cookie]
+
+
+def changepassword(user:str, newpassword:str) -> str|None:
+    "Sets a new password for the user, on success returns None, on failure returns an error message"
+
+    if len(newpassword) < 8:
+        return "At least 8 characters needed"
+
+    if re.search('[^a-zA-Z0-9]', newpassword) is None:
+        return "At least one special character needed"
+
+    # generate and store a random number as salt
+    salt = os.urandom(16)
+
+    # encode the userpassword
+    encoded_password = scrypt( password = newpassword.encode(),
+                               salt = salt,
+                               n = 2048,
+                               r = 8,
+                               p = 1,
+                               maxmem=0,
+                               dklen=64)
+
+    con = sqlite3.connect(USERDBASE)
+    with con:
+        cur = con.cursor()
+        cur.execute("SELECT count(*) FROM users WHERE name = ?", (user,))
+        result = cur.fetchone()[0]
+        if result:
+            cur.execute("UPDATE users SET password = ?, salt = ? WHERE name = ?", (encoded_password, salt, user))
+    cur.close()
+    con.close()
+    if not result:
+        logout(user)
+        return "User not found"

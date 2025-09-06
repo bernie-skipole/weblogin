@@ -117,6 +117,26 @@ async def edit(request: Request[str, str, State]) -> Template:
     return Template(template_name="useredit.html", context={"user": user})
 
 
+@post("/changepwd")
+async def changepwd(request: Request[str, str, State]) -> Template:
+    user = request.user
+    form_data = await request.form()
+    oldpassword = form_data.get("oldpassword")
+    password1 = form_data.get("password1")
+    password2 = form_data.get("password2")
+    if password1 != password2:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
+    message = userdata.changepassword(user, password1)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    else:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"result\" style=\"color:green\">Success! Your password has changed</p>")
+
+
+
 @get("/members")
 async def members(request: Request[str, str, State]) -> Template:
     """The main application page, this has cookies automatically checked by
@@ -144,6 +164,7 @@ app = Litestar(
                     login,
                     logout,
                     edit,
+                    changepwd,
                     members,
                     create_static_files_router(path="/static", directories=[STATICFILES]),
                    ],
