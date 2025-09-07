@@ -4,7 +4,7 @@
    You should immediately log in as this user and change the password.
    """
 
-import sqlite3, os, time, asyncio, re
+import sqlite3, os, time, re
 
 from hashlib import scrypt
 
@@ -12,17 +12,28 @@ from secrets import token_urlsafe
 
 from pathlib import Path
 
-
-# location of sqlite database where users are kept
-USERDBASE = Path(__file__).parent.resolve() / "users.sqlite"
+from dataclasses import dataclass
 
 
-# Dictionary of randomstring:(time, username, auth), built as cookies are created
+# set the location of sqlite database as the current working directory
+# this database will hold users and their hashed passwords
+USERDBASE = Path.cwd() / "users.sqlite"
+
+
+# Dictionary of randomstring:userauth, built as cookies are created
 # The randomstring is sent as the cookie token
 USERCOOKIES = {}
 
 # seconds after which an idle user will be logged out (5 minutes in this example)
 IDLETIMEOUT = 300
+
+
+@dataclass
+class UserAuth():
+    "Class used to hold a logged in user details"
+    user:str
+    auth:str
+    time:float
 
 
 
@@ -52,21 +63,18 @@ if not USERDBASE.is_file():
 
 
 
-async def checkuserpassword(user:str, password:str) -> str|None:
-    """Given a user,password pair from a login form, return a 'logged in' cookie
-       if this matches the database entry for the user.
+def checkuserpassword(user:str, password:str) -> UserAuth|None:
+    """Given a user,password pair from a login form,
+       If this matches the database entry for the user, return a UserAuth object
        If this user does not exist, or the password does not match, return None"""
     # everytime a user logs in, expired cookies are deleted
     cleanusercookies()
     if (not user) or (not password):
         # sleep to force a time delay to annoy anyone trying to guess a password
-        await asyncio.sleep(1.0)
         return
     if len(user)<5:
-        await asyncio.sleep(1.0)
         return
     if len(password)<8:
-        await asyncio.sleep(1.0)
         return
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
@@ -75,7 +83,6 @@ async def checkuserpassword(user:str, password:str) -> str|None:
     cur.close()
     con.close()
     if not result:
-        await asyncio.sleep(1.0)
         return
     # encode the received password, and compare it with the value in the database
     storedpassword, auth, salt = result
@@ -87,14 +94,18 @@ async def checkuserpassword(user:str, password:str) -> str|None:
                                p = 1,
                                maxmem=0,
                                dklen=64)
-    if receivedpassword != storedpassword:
-        # invalid password
-        await asyncio.sleep(1.0)
-        return
-    # user is logging in, return a cookie
+    if receivedpassword == storedpassword:
+        # user and password are ok, return a UserAuth object
+        return UserAuth(user, auth, time.time())
+    # invalid password, return None
+
+
+def getcookie(userauth:UserAuth) -> str:
+    "Given a userauth object, return a cookie string value"
     randomstring = token_urlsafe(16)
+    userauth.time = time.time()
     # record this logged in user in a loggedin dictionary
-    USERCOOKIES[randomstring] = (time.time(), user, auth)
+    USERCOOKIES[randomstring] = userauth
     # The cookie returned will be the random string
     return randomstring
 
@@ -103,32 +114,32 @@ def cleanusercookies() -> None:
     "Every time someone logs in, remove any expired cookies from USERCOOKIES"
     now = time.time()
     for cookie in list(USERCOOKIES.keys()):
-        t, user, auth = USERCOOKIES[cookie]
-        if now-t > IDLETIMEOUT:
+        userauth = USERCOOKIES[cookie]
+        if now-userauth.time > IDLETIMEOUT:
             # log the user out, after IDLETIMEOUT inactivity
             del USERCOOKIES[cookie]
 
 
-def verify(cookie:str) -> tuple[str, str]|None:
-    "Return (username, auth), or None on failure"
+def verify(cookie:str) -> UserAuth|None:
+    "Return UserAuth object, or None on failure"
     if cookie not in USERCOOKIES:
         return
-    t, user, auth = USERCOOKIES[cookie]
+    userauth = USERCOOKIES[cookie]
     now = time.time()
-    if now-t > IDLETIMEOUT:
+    if now-userauth.time > IDLETIMEOUT:
         # log the user out, as IDLETIMEOUT inactivity has passed
         del USERCOOKIES[cookie]
         return
     # success, update the time
-    USERCOOKIES[cookie] = (now, user, auth)
-    return user, auth
+    userauth.time = now
+    return userauth
 
 
 def logout(user:str) -> None:
     "Logs the user out"
     for cookie in list(USERCOOKIES.keys()):
-        t, loggedinuser, auth = USERCOOKIES[cookie]
-        if user == loggedinuser:
+        userauth = USERCOOKIES[cookie]
+        if user == userauth.user:
             del USERCOOKIES[cookie]
 
 
@@ -163,5 +174,6 @@ def changepassword(user:str, newpassword:str) -> str|None:
     cur.close()
     con.close()
     if not result:
+        # invalid user
         logout(user)
         return "User not found"

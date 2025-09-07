@@ -1,3 +1,8 @@
+
+import asyncio
+
+from pathlib import Path
+
 from litestar import Litestar, get, post, Request
 from litestar.plugins.htmx import HTMXPlugin, HTMXTemplate, ClientRedirect
 from litestar.contrib.mako import MakoTemplateEngine
@@ -9,8 +14,6 @@ from litestar.datastructures import Cookie, State
 from litestar.middleware import AbstractAuthenticationMiddleware, AuthenticationResult, DefineMiddleware
 from litestar.connection import ASGIConnection
 from litestar.exceptions import NotAuthorizedException
-
-from pathlib import Path
 
 from . import userdata
 
@@ -43,13 +46,12 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
         # the userdata.verify function looks up a dictionary of logged in users
         userauth = userdata.verify(token)
         # If not verified, userauth will be None
-        # If verified userauth will be a tuple of (username, authorization level)
-        # where authorization level is either 'admin' or 'user.
+        # If verified userauth will be a userdata.UserAuth object
         if userauth is None:
             raise NotAuthorizedException()
         # Return an AuthenticationResult which will be
         # made available to route handlers as request: Request[str, str, State]
-        return AuthenticationResult(user=userauth[0], auth=userauth[1])
+        return AuthenticationResult(user=userauth.user, auth=userauth.auth)
 
 
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
@@ -89,17 +91,20 @@ async def login(request: Request) -> Template|ClientRedirect:
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
-    # check these on the database of users, this call returns a logged-in cookie
+    # check these on the database of users, this call returns a userdata.UserAuth object
     # if the user exists, and the password is correct, otherwise it returns None
-    loggedincookie = await userdata.checkuserpassword(username, password)
-    if loggedincookie is None:
+    userauth = userdata.checkuserpassword(username, password)
+    if userauth is None:
+        # sleep to force a time delay to annoy anyone trying to guess a password
+        await asyncio.sleep(1.0)
         # unable to find a matching username/password
         # returns an 'Invalid' template which the htmx javascript
         # puts in the right place on the login page
         return HTMXTemplate(None,
                             template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid</p>")
-    # The user checks out ok, set redirect to the members page,
-    # with the loggedincookie
+    # The user checks out ok, create a cookie for this user and set redirect to the members page,
+    loggedincookie = userdata.getcookie(userauth)
+    # redirect with the loggedincookie
     response =  ClientRedirect("/members")
     response.set_cookie(key = 'token', value=loggedincookie)
     return response
@@ -124,6 +129,12 @@ async def changepwd(request: Request[str, str, State]) -> Template:
     oldpassword = form_data.get("oldpassword")
     password1 = form_data.get("password1")
     password2 = form_data.get("password2")
+    # check old password
+    userauth = userdata.checkuserpassword(user, oldpassword)
+    if userauth is None:
+        # invalid old password
+        return HTMXTemplate(None,
+                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Incorrect old password!</p>")
     if password1 != password2:
         return HTMXTemplate(None,
                         template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
