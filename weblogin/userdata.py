@@ -177,3 +177,8 @@ def changepassword(user:str, newpassword:str) -> str|None:
         # invalid user
         logout(user)
         return "User not found"
+
+
+def deluser(user:str) -> str|None:
+    "Deletes the user, on success returns None, on failure returns an error message"
+    return "An error"
