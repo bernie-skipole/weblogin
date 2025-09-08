@@ -153,7 +153,7 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     message = userdata.deluser(user)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"delresult\" class=\"w3-animate-right\" style=\"color:red\">Failed. {message}</p>")
+                        template_str=f"Failed. {message}")
     # the user has been deleted
     userdata.logout(user)
     return ClientRedirect("/")
