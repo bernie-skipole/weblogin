@@ -146,14 +146,14 @@ async def changepwd(request: Request[str, str, State]) -> Template:
                         template_str="<p id=\"result\" style=\"color:green\">Success! Your password has changed</p>")
 
 
-@get("/deluser")
+@post("/deluser")
 async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     "Deletes the user, and redirects"
     user = request.user
     message = userdata.deluser(user)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Failed. {message}</p>")
+                        template_str=f"<p id=\"delresult\" class=\"w3-animate-right\" style=\"color:red\">Failed. {message}</p>")
     # the user has been deleted
     userdata.logout(user)
     return ClientRedirect("/")
