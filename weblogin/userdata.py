@@ -70,7 +70,6 @@ def checkuserpassword(user:str, password:str) -> UserAuth|None:
     # everytime a user logs in, expired cookies are deleted
     cleanusercookies()
     if (not user) or (not password):
-        # sleep to force a time delay to annoy anyone trying to guess a password
         return
     if len(user)<5:
         return
@@ -147,10 +146,10 @@ def changepassword(user:str, newpassword:str) -> str|None:
     "Sets a new password for the user, on success returns None, on failure returns an error message"
 
     if len(newpassword) < 8:
-        return "At least 8 characters needed"
+        return "New password needs at least 8 characters"
 
     if re.search('[^a-zA-Z0-9]', newpassword) is None:
-        return "At least one special character needed"
+        return "New password needs at least one special character"
 
     # generate and store a random number as salt
     salt = os.urandom(16)
@@ -181,4 +180,26 @@ def changepassword(user:str, newpassword:str) -> str|None:
 
 def deluser(user:str) -> str|None:
     "Deletes the user, on success returns None, on failure returns an error message"
-    return "An error"
+    if not user:
+        return "No user given"
+    con = sqlite3.connect(USERDBASE)
+    cur = con.cursor()
+    cur.execute("SELECT auth FROM users WHERE name = ?", (user,))
+    result = cur.fetchone()
+    if not result:
+        cur.close()
+        con.close()
+        return "User not recognised"
+    if result[0] == "admin":
+        # Further check: confirm this is not the only admin
+        cur.execute("SELECT count(*) FROM users WHERE auth = 'admin'")
+        number = cur.fetchone()[0]
+        if number == 1:
+            cur.close()
+            con.close()
+            return "Cannot delete the only administrator"
+    curs.execute("DELETE FROM users WHERE name = ?", (user,))
+    con.commit()
+    cur.close()
+    con.close()
+    # The user is deleted

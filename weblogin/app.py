@@ -56,8 +56,10 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
 
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
     """If a NotAuthorizedException is raised, this handles it, and redirects
-       the caller to the login page"""
-    return Redirect("/login")
+       the caller to the public site page"""
+    if request.htmx:
+        return ClientRedirect("/")
+    return Redirect("/")
 
 
 # This defines LoggedInAuth as middleware and also
@@ -157,7 +159,6 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     # the user has been deleted
     userdata.logout(user)
     return ClientRedirect("/")
-
 
 
 
