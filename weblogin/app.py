@@ -123,7 +123,7 @@ async def edit(request: Request[str, str, State]) -> Template:
     return Template(template_name="useredit.html", context={"user": user})
 
 
-@post("/changepwd")
+@post("/edit/changepwd")
 async def changepwd(request: Request[str, str, State]) -> Template:
     user = request.user
     form_data = await request.form()
@@ -148,7 +148,7 @@ async def changepwd(request: Request[str, str, State]) -> Template:
                         template_str="<p id=\"result\" style=\"color:green\">Success! Your password has changed</p>")
 
 
-@post("/deluser")
+@post("/edit/deluser")
 async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     "Deletes the user, and redirects"
     user = request.user
