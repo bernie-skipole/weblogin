@@ -56,10 +56,10 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
 
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
     """If a NotAuthorizedException is raised, this handles it, and redirects
-       the caller to the public site page"""
+       the caller to the login page"""
     if request.htmx:
-        return ClientRedirect("/")
-    return Redirect("/")
+        return ClientRedirect("/login")
+    return Redirect("/login")
 
 
 # This defines LoggedInAuth as middleware and also
