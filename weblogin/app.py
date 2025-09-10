@@ -15,7 +15,7 @@ from litestar.middleware import AbstractAuthenticationMiddleware, Authentication
 from litestar.connection import ASGIConnection
 from litestar.exceptions import NotAuthorizedException
 
-from . import userdata
+from . import userdata, edit
 
 # userdata is a module defining users and password on a database,
 # on first being imported if the file users.sqlite does not exist, an
@@ -70,9 +70,11 @@ def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
 auth_mw = DefineMiddleware(LoggedInAuth, exclude="static")
 
 
+# Note, all routes with 'exclude_from_auth=True' do not have cookie checked
+# and are not authenticated
 
 @get("/", exclude_from_auth=True)
-async def start() -> Template:
+async def publicroot() -> Template:
     "This is the public root page of your site"
     return Template("landing.html")
 
@@ -112,66 +114,17 @@ async def login(request: Request) -> Template|ClientRedirect:
     return response
 
 
-@get("/edit")
-async def edit(request: Request[str, str, State]) -> Template:
-    """This allows a user to edit his/her password, or delete themself from the system
-       If the user is an admin user, further facilities to add/delete/reset other users
-       are available"""
-    user = request.user
-    auth = request.auth
-    # if auth == "User":
-    return Template(template_name="useredit.html", context={"user": user})
-
-
-@post("/edit/changepwd")
-async def changepwd(request: Request[str, str, State]) -> Template:
-    user = request.user
-    form_data = await request.form()
-    oldpassword = form_data.get("oldpassword")
-    password1 = form_data.get("password1")
-    password2 = form_data.get("password2")
-    # check old password
-    userauth = userdata.checkuserpassword(user, oldpassword)
-    if userauth is None:
-        # invalid old password
-        return HTMXTemplate(None,
-                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Incorrect old password!</p>")
-    if password1 != password2:
-        return HTMXTemplate(None,
-                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
-    message = userdata.changepassword(user, password1)
-    if message:
-        return HTMXTemplate(None,
-                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    else:
-        return HTMXTemplate(None,
-                        template_str="<p id=\"result\" style=\"color:green\">Success! Your password has changed</p>")
-
-
-@post("/edit/deluser")
-async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Deletes the user, and redirects"
-    user = request.user
-    message = userdata.deluser(user)
-    if message:
-        return HTMXTemplate(None,
-                        template_str=f"Failed. {message}")
-    # the user has been deleted
-    userdata.logout(user)
-    return ClientRedirect("/")
-
-
 
 @get("/members")
 async def members(request: Request[str, str, State]) -> Template:
-    """The main application page, this has cookies automatically checked by
+    """The main members application page, this has cookies automatically checked by
        the LoggedInAuth middleware which generates the 'request' containing
        the user and auth.
        The template returned should show your application."""
     user = request.user
     auth = request.auth
     # Return a template which will show your main application
-    return Template(template_name="main.html", context={"user": user, "auth": auth})
+    return Template(template_name="members.html", context={"user": user, "auth": auth})
 
 
 @get("/logout")
@@ -184,13 +137,11 @@ async def logout(request: Request[str, str, State]) -> Template:
 
 # Initialize the Litestar app with a Mako template engine and register the routes
 app = Litestar(
-    route_handlers=[start,
+    route_handlers=[publicroot,
                     login_page,
                     login,
                     logout,
-                    edit,
-                    changepwd,
-                    deluser,
+                    edit.edit_router,     # This router in edit.py deals with routes below /edit
                     members,
                     create_static_files_router(path="/static", directories=[STATICFILES]),
                    ],
