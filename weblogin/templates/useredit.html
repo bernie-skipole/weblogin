@@ -1,27 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Set Password</title>
-<style>
-html, body {
-  height: 100%;
-  margin: 0;
-  }
-</style>
-<link rel="stylesheet" href="/static/w3.css">
-<link rel="stylesheet" href="/static/w3-colors-flat.css">
-<script src="/static/htmx.min.js"></script>
-<script src="/static/alpinejs.min.js" defer></script>
+## useredit.html
+<%inherit file="base_edit.html"/>
 
-<body class="w3-flat-clouds">
+<%block name="title">
+<title>User Edit</title>
+</%block>
 
-  <header class="w3-container w3-flat-silver w3-block">
-    <p class="w3-margin-right w3-left"><a href="/" class="w3-button w3-black w3-ripple w3-round w3-medium">Site Root</a></p>
-    <p class="w3-right"><a href="/logout" class="w3-button w3-black w3-ripple w3-round w3-small">Logout</a></p>
-    <h1>Site title - edit the template to set this</h1>
-  </header>
 
 <div x-data="{ open: false }" style="margin-left:auto;width:80%;max-width:400px;margin-right:auto;margin-top:15vh">
 
@@ -59,7 +43,3 @@ html, body {
   </div>
 
 </div>
-
-
-</body>
-</html>

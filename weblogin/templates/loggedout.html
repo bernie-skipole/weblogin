@@ -1,22 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
+## loggedout.html
+<%inherit file="base_edit.html"/>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Logged Out Page</title>
-<link rel="stylesheet" href="/static/w3.css">
-<link rel="stylesheet" href="/static/w3-colors-flat.css">
+<%block name="title">
+<title>Logged out</title>
+</%block>
 
-<body class="w3-flat-clouds">
-    <header class="w3-container w3-flat-silver w3-block">
-      <p class="w3-margin-right w3-left"><a href="/" class="w3-button w3-black w3-ripple w3-round w3-medium">Site Root</a></p>
-      <h1>Site title - edit the template to set this</h1>
-    </header>
-        <div class="w3-container w3-card" style="margin-left:auto;margin-right:auto;margin-top:10%;width:80%;max-width:400px">
-          <h2 class="w3-center">You are now logged out</h2>
-          <p class="w3-center">
-            <a href="/login" class="w3-button w3-black w3-ripple w3-round">Login</a>
-          </p>
-        </div>
-</body>
-</html>
+<%block name="logoutbutton">
+</%block>
+
+    <div class="w3-container w3-card" style="margin-left:auto;margin-right:auto;margin-top:10%;width:80%;max-width:400px">
+      <h2 class="w3-center">You are now logged out</h2>
+      <p class="w3-center">
+        <a href="/login" class="w3-button w3-black w3-ripple w3-round">Login</a>
+      </p>
+    </div>
