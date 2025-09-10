@@ -18,8 +18,10 @@ async def edit(request: Request[str, str, State]) -> Template:
        are available"""
     user = request.user
     auth = request.auth
-    # if auth == "User":
-    return Template(template_name="useredit.html", context={"user": user})
+    if auth == "User":
+        return Template(template_name="useredit.html", context={"user": user})
+    # or if this user has admin auth
+    return Template(template_name="adminedit.html", context={"user": user})
 
 
 @post("/changepwd")
@@ -60,7 +62,32 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     return ClientRedirect("/")
 
 
+@post("/newuser")
+async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    if request.auth != "admin":
+        # log the user out
+        userdata.logout(request.user)
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+
+    form_data = await request.form()
+    username = form_data.get("username")
+    password = form_data.get("password")
+    authlevel = form_data.get("authlevel")
+    # check password
+    message = userdata.adduser(username, password, authlevel)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    return HTMXTemplate(None,
+                template_str="<p id=\"result\" style=\"color:green\">Success! New user added</p>")
+
+
+
+
 edit_router = Router(path="/edit", route_handlers=[edit,
                                                    changepwd,
-                                                   deluser
+                                                   deluser,
+                                                   newuser
                                                   ])

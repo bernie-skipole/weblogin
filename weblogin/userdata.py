@@ -203,3 +203,15 @@ def deluser(user:str) -> str|None:
     cur.close()
     con.close()
     # The user is deleted
+
+
+def adduser(user:str, password:str, auth:str) -> str|None:
+    "Checks the user does not already exist, returns None on success, on failure returns an error message"
+    if not user:
+        return "No user given"
+    elif len(password) < 8:
+        return "New password needs at least 8 characters"
+    elif re.search('[^a-zA-Z0-9]', password) is None:
+        return "The password needs at least one special character"
+    elif auth != "user" and auth != "admin":
+        return "Auth level not recognised"
