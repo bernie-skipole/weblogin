@@ -33,6 +33,7 @@ class UserAuth():
     "Class used to hold a logged in user details"
     user:str
     auth:str
+    fullname:str
     time:float
 
 
@@ -56,9 +57,9 @@ if not USERDBASE.is_file():
     con = sqlite3.connect(USERDBASE)
 
     with con:
-        con.execute("CREATE TABLE users(name VARCHAR UNIQUE, password, auth, salt)")
-        con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt)",
-              {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt})
+        con.execute("CREATE TABLE users(name VARCHAR UNIQUE, password, auth, salt, fullname)")
+        con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt, :fullname)",
+              {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt, 'fullname':'Default Administrator'})
     con.close()
 
 
@@ -77,14 +78,14 @@ def checkuserpassword(user:str, password:str) -> UserAuth|None:
         return
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
-    cur.execute("SELECT password,auth,salt FROM users WHERE name = ?", (user,))
+    cur.execute("SELECT password,auth,salt,fullname FROM users WHERE name = ?", (user,))
     result = cur.fetchone()
     cur.close()
     con.close()
     if not result:
         return
     # encode the received password, and compare it with the value in the database
-    storedpassword, auth, salt = result
+    storedpassword, auth, salt, fullname = result
     # hash the received password to compare it with the encoded password
     receivedpassword = scrypt( password = password.encode(),
                                salt = salt,
@@ -95,7 +96,7 @@ def checkuserpassword(user:str, password:str) -> UserAuth|None:
                                dklen=64)
     if receivedpassword == storedpassword:
         # user and password are ok, return a UserAuth object
-        return UserAuth(user, auth, time.time())
+        return UserAuth(user, auth, fullname, time.time())
     # invalid password, return None
 
 
@@ -107,6 +108,13 @@ def getcookie(userauth:UserAuth) -> str:
     USERCOOKIES[randomstring] = userauth
     # The cookie returned will be the random string
     return randomstring
+
+
+def getuserauth(user:str) -> UserAuth:
+    "If the user is logged in return his UserAuth, otherwise return None"
+    for ua in USERCOOKIES.values():
+        if user == ua.user:
+            return ua
 
 
 def cleanusercookies() -> None:

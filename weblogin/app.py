@@ -116,15 +116,20 @@ async def login(request: Request) -> Template|ClientRedirect:
 
 
 @get("/members")
-async def members(request: Request[str, str, State]) -> Template:
+async def members(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     """The main members application page, this has cookies automatically checked by
        the LoggedInAuth middleware which generates the 'request' containing
        the user and auth.
        The template returned should show your application."""
     user = request.user
     auth = request.auth
+    ua = userdata.getuserauth(user)
+    if ua is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
     # Return a template which will show your main application
-    return Template(template_name="members.html", context={"user": user, "auth": auth})
+    return Template(template_name="members.html", context={"user": user, "auth": auth, "fullname":ua.fullname})
 
 
 @get("/logout")
