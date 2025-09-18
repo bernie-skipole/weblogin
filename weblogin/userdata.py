@@ -111,10 +111,17 @@ def getcookie(userauth:UserAuth) -> str:
 
 
 def getuserauth(user:str) -> UserAuth:
-    "If the user is logged in return his UserAuth, otherwise return None"
-    for ua in USERCOOKIES.values():
-        if user == ua.user:
-            return ua
+    "Return UserAuth object for the given user, if not found, return None"
+    con = sqlite3.connect(USERDBASE)
+    cur = con.cursor()
+    cur.execute("SELECT auth, fullname FROM users WHERE name = ?", (user,))
+    result = cur.fetchone()
+    cur.close()
+    con.close()
+    if not result:
+        return
+    auth, fullname = result
+    return UserAuth(user, auth, fullname, time.time())
 
 
 def cleanusercookies() -> None:

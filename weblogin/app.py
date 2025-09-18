@@ -125,6 +125,7 @@ async def members(request: Request[str, str, State]) -> Template|ClientRedirect|
     auth = request.auth
     ua = userdata.getuserauth(user)
     if ua is None:
+        # user not recognised, this should never happen, but in the event it does
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
