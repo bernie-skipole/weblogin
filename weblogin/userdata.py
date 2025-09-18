@@ -57,7 +57,7 @@ if not USERDBASE.is_file():
     con = sqlite3.connect(USERDBASE)
 
     with con:
-        con.execute("CREATE TABLE users(name VARCHAR UNIQUE, password, auth, salt, fullname)")
+        con.execute("CREATE TABLE users(name TEXT PRIMARY KEY, password TEXT NOT NULL, auth TEXT NOT NULL, salt TEXT NOT NULL, fullname TEXT)")
         con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt, :fullname)",
               {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt, 'fullname':'Default Administrator'})
     con.close()
