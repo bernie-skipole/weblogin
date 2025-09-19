@@ -57,20 +57,18 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     if message:
         return HTMXTemplate(None,
                         template_str=f"Failed. {message}")
-    # the user has been deleted
-    userdata.logout(user)
     return ClientRedirect("/")
 
 
 @post("/newuser")
 async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     if request.auth != "admin":
-        # log the user out
-        userdata.logout(request.user)
+        if 'token' in request.cookies:
+            # log the user out
+            userdata.logout(request.cookies['token'])
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")

@@ -216,6 +216,8 @@ def deluser(user:str) -> str|None:
     "Deletes the user, on success returns None, on failure returns an error message"
     if not user:
         return "No user given"
+    # log the user out
+    logoutuser(user)
     # clear cache
     getuserinfo.cache_clear()
     con = sqlite3.connect(USERDBASE)
