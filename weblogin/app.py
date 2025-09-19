@@ -136,8 +136,10 @@ async def members(request: Request[str, str, State]) -> Template|ClientRedirect|
 @get("/logout")
 async def logout(request: Request[str, str, State]) -> Template:
     "Logs the user out, and render the logout page"
+    if 'token' not in request.cookies:
+        return
     # log the user out
-    userdata.logout(request.user)
+    userdata.logout(request.cookies['token'])
     return Template("loggedout.html")
 
 

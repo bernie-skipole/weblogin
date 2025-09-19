@@ -14,7 +14,7 @@ from pathlib import Path
 
 from dataclasses import dataclass
 
-from functools import lru_cach
+from functools import lru_cache
 
 
 # set the location of sqlite database as the current working directory
@@ -163,12 +163,17 @@ def verify(cookie:str) -> UserInfo|None:
     return getuserinfo(userauth.user)
 
 
-def logout(user:str) -> None:
+def logoutuser(user:str) -> None:
     "Logs the user out"
     for cookie in list(USERCOOKIES.keys()):
         userauth = USERCOOKIES[cookie]
         if user == userauth.user:
             del USERCOOKIES[cookie]
+
+def logout(cookie:str) -> None:
+    if cookie not in USERCOOKIES:
+        return
+    del USERCOOKIES[cookie]
 
 
 def changepassword(user:str, newpassword:str) -> str|None:
@@ -203,7 +208,7 @@ def changepassword(user:str, newpassword:str) -> str|None:
     con.close()
     if not result:
         # invalid user
-        logout(user)
+        logoutuser(user)
         return "User not found"
 
 
