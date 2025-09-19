@@ -164,13 +164,15 @@ def verify(cookie:str) -> UserInfo|None:
 
 
 def logoutuser(user:str) -> None:
-    "Logs the user out"
+    "Logs the user out, even if user has multiple sessions open"
     for cookie in list(USERCOOKIES.keys()):
         userauth = USERCOOKIES[cookie]
         if user == userauth.user:
             del USERCOOKIES[cookie]
 
+
 def logout(cookie:str) -> None:
+    "Logout function by removing cookie from dictionary of logged in cookies"
     if cookie not in USERCOOKIES:
         return
     del USERCOOKIES[cookie]
