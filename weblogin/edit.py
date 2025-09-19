@@ -32,8 +32,8 @@ async def changepwd(request: Request[str, str, State]) -> Template:
     password1 = form_data.get("password1")
     password2 = form_data.get("password2")
     # check old password
-    userauth = userdata.checkuserpassword(user, oldpassword)
-    if userauth is None:
+    userinfo = userdata.checkuserpassword(user, oldpassword)
+    if userinfo is None:
         # invalid old password
         return HTMXTemplate(None,
                         template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Incorrect old password!</p>")

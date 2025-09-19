@@ -14,6 +14,8 @@ from pathlib import Path
 
 from dataclasses import dataclass
 
+from functools import lru_cach
+
 
 # set the location of sqlite database as the current working directory
 # this database will hold users and their hashed passwords
@@ -29,13 +31,18 @@ IDLETIMEOUT = 300
 
 
 @dataclass
-class UserAuth():
-    "Class used to hold a logged in user details"
+class UserInfo():
+    "Class used to hold user details"
     user:str
     auth:str
     fullname:str
-    time:float
 
+
+@dataclass
+class UserAuth():
+    "Class used to hold a logged in user details"
+    user:str
+    time:float
 
 
 if not USERDBASE.is_file():
@@ -57,16 +64,16 @@ if not USERDBASE.is_file():
     con = sqlite3.connect(USERDBASE)
 
     with con:
-        con.execute("CREATE TABLE users(name TEXT PRIMARY KEY, password TEXT NOT NULL, auth TEXT NOT NULL, salt TEXT NOT NULL, fullname TEXT)")
+        con.execute("CREATE TABLE users(name TEXT PRIMARY KEY, password TEXT NOT NULL, auth TEXT NOT NULL, salt TEXT NOT NULL, fullname TEXT) WITHOUT ROWID")
         con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt, :fullname)",
               {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt, 'fullname':'Default Administrator'})
     con.close()
 
 
 
-def checkuserpassword(user:str, password:str) -> UserAuth|None:
+def checkuserpassword(user:str, password:str) -> UserInfo|None:
     """Given a user,password pair from a login form,
-       If this matches the database entry for the user, return a UserAuth object
+       If this matches the database entry for the user, return a UserInfo object
        If this user does not exist, or the password does not match, return None"""
     # everytime a user logs in, expired cookies are deleted
     cleanusercookies()
@@ -95,23 +102,29 @@ def checkuserpassword(user:str, password:str) -> UserAuth|None:
                                maxmem=0,
                                dklen=64)
     if receivedpassword == storedpassword:
-        # user and password are ok, return a UserAuth object
-        return UserAuth(user, auth, fullname, time.time())
+        # user and password are ok, return a UserInfo object
+        return UserInfo(user, auth, fullname)
     # invalid password, return None
 
 
-def getcookie(userauth:UserAuth) -> str:
-    "Given a userauth object, return a cookie string value"
+def getcookie(user:str) -> str:
+    """Given a user, return a cookie string value
+       Also sets a UserAuth object into USERCOOKIES"""
     randomstring = token_urlsafe(16)
-    userauth.time = time.time()
+    userauth = UserAuth(user,time.time())
     # record this logged in user in a loggedin dictionary
     USERCOOKIES[randomstring] = userauth
     # The cookie returned will be the random string
     return randomstring
 
 
-def getuserauth(user:str) -> UserAuth:
-    "Return UserAuth object for the given user, if not found, return None"
+@lru_cache
+def getuserinfo(user:str) -> UserInfo:
+    "Return UserInfo object for the given user, if not found, return None"
+
+    # Note this is cached, so repeated calls for the same user
+    # do not need sqlite lookups.
+
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
     cur.execute("SELECT auth, fullname FROM users WHERE name = ?", (user,))
@@ -121,7 +134,7 @@ def getuserauth(user:str) -> UserAuth:
     if not result:
         return
     auth, fullname = result
-    return UserAuth(user, auth, fullname, time.time())
+    return UserInfo(user, auth, fullname)
 
 
 def cleanusercookies() -> None:
@@ -134,8 +147,8 @@ def cleanusercookies() -> None:
             del USERCOOKIES[cookie]
 
 
-def verify(cookie:str) -> UserAuth|None:
-    "Return UserAuth object, or None on failure"
+def verify(cookie:str) -> UserInfo|None:
+    "Return UserInfo object, or None on failure"
     if cookie not in USERCOOKIES:
         return
     userauth = USERCOOKIES[cookie]
@@ -146,7 +159,8 @@ def verify(cookie:str) -> UserAuth|None:
         return
     # success, update the time
     userauth.time = now
-    return userauth
+    # return a UserInfo object
+    return getuserinfo(userauth.user)
 
 
 def logout(user:str) -> None:
@@ -197,6 +211,8 @@ def deluser(user:str) -> str|None:
     "Deletes the user, on success returns None, on failure returns an error message"
     if not user:
         return "No user given"
+    # clear cache
+    getuserinfo.cache_clear()
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
     cur.execute("SELECT auth FROM users WHERE name = ?", (user,))

@@ -44,14 +44,14 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
         if not token:
             raise NotAuthorizedException()
         # the userdata.verify function looks up a dictionary of logged in users
-        userauth = userdata.verify(token)
-        # If not verified, userauth will be None
-        # If verified userauth will be a userdata.UserAuth object
-        if userauth is None:
+        userinfo = userdata.verify(token)
+        # If not verified, userinfo will be None
+        # If verified userinfo will be a userdata.UserInfo object
+        if userinfo is None:
             raise NotAuthorizedException()
         # Return an AuthenticationResult which will be
         # made available to route handlers as request: Request[str, str, State]
-        return AuthenticationResult(user=userauth.user, auth=userauth.auth)
+        return AuthenticationResult(user=userinfo.user, auth=userinfo.auth)
 
 
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
@@ -95,10 +95,10 @@ async def login(request: Request) -> Template|ClientRedirect:
     form_data = await request.form()
     username = form_data.get("username")
     password = form_data.get("password")
-    # check these on the database of users, this call returns a userdata.UserAuth object
+    # check these on the database of users, this checkuserpassword returns a userdata.UserInfo object
     # if the user exists, and the password is correct, otherwise it returns None
-    userauth = userdata.checkuserpassword(username, password)
-    if userauth is None:
+    userinfo = userdata.checkuserpassword(username, password)
+    if userinfo is None:
         # sleep to force a time delay to annoy anyone trying to guess a password
         await asyncio.sleep(1.0)
         # unable to find a matching username/password
@@ -107,7 +107,7 @@ async def login(request: Request) -> Template|ClientRedirect:
         return HTMXTemplate(None,
                             template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid</p>")
     # The user checks out ok, create a cookie for this user and set redirect to the members page,
-    loggedincookie = userdata.getcookie(userauth)
+    loggedincookie = userdata.getcookie(userinfo.user)
     # redirect with the loggedincookie
     response =  ClientRedirect("/members")
     response.set_cookie(key = 'token', value=loggedincookie)
@@ -123,14 +123,14 @@ async def members(request: Request[str, str, State]) -> Template|ClientRedirect|
        The template returned should show your application."""
     user = request.user
     auth = request.auth
-    ua = userdata.getuserauth(user)
-    if ua is None:
+    uinfo = userdata.getuserinfo(user)
+    if uinfo is None:
         # user not recognised, this should never happen, but in the event it does
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
     # Return a template which will show your main application
-    return Template(template_name="members.html", context={"user": user, "auth": auth, "fullname":ua.fullname})
+    return Template(template_name="members.html", context={"user": user, "auth": auth, "fullname":uinfo.fullname})
 
 
 @get("/logout")
