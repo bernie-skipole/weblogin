@@ -307,3 +307,15 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
     cur.close()
     con.close()
     # The user is added
+
+
+def userlist(idx:int) -> dict:
+    "Returns a dict of {user:list of usernames , fullname:list of fullnames}"
+    con = sqlite3.connect(USERDBASE)
+    cur = con.cursor()
+    cur.execute("SELECT username, fullname FROM users")
+    users = cur.fetchall()
+    cur.close()
+    con.close()
+    ulist, flist = list(zip(*users))
+    return {"user":ulist, "fullname":flist}
