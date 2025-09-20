@@ -70,10 +70,10 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
             return ClientRedirect("/login")
         return Redirect("/login")
     form_data = await request.form()
-    username = form_data.get("username")
-    password = form_data.get("password")
-    authlevel = form_data.get("authlevel")
-    # check password
+    username = form_data.get("username").strip()
+    password = form_data.get("password").strip()
+    authlevel = form_data.get("authlevel").strip()
+    # add the new user
     message = userdata.adduser(username, password, authlevel)
     if message:
         return HTMXTemplate(None,

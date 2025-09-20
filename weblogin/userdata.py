@@ -64,9 +64,9 @@ if not USERDBASE.is_file():
     con = sqlite3.connect(USERDBASE)
 
     with con:
-        con.execute("CREATE TABLE users(name TEXT PRIMARY KEY, password TEXT NOT NULL, auth TEXT NOT NULL, salt TEXT NOT NULL, fullname TEXT) WITHOUT ROWID")
-        con.execute("INSERT INTO users VALUES(:name, :password, :auth, :salt, :fullname)",
-              {'name':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt, 'fullname':'Default Administrator'})
+        con.execute("CREATE TABLE users(username TEXT PRIMARY KEY, password TEXT NOT NULL, auth TEXT NOT NULL, salt TEXT NOT NULL, fullname TEXT) WITHOUT ROWID")
+        con.execute("INSERT INTO users VALUES(:username, :password, :auth, :salt, :fullname)",
+              {'username':'admin', 'password':encoded_password, 'auth':'admin', 'salt':salt, 'fullname':'Default Administrator'})
     con.close()
 
 
@@ -85,7 +85,7 @@ def checkuserpassword(user:str, password:str) -> UserInfo|None:
         return
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
-    cur.execute("SELECT password,auth,salt,fullname FROM users WHERE name = ?", (user,))
+    cur.execute("SELECT password,auth,salt,fullname FROM users WHERE username = ?", (user,))
     result = cur.fetchone()
     cur.close()
     con.close()
@@ -108,7 +108,7 @@ def checkuserpassword(user:str, password:str) -> UserInfo|None:
 
 
 def getcookie(user:str) -> str:
-    """Given a user, return a cookie string value
+    """Given a user, create and return a cookie string value
        Also sets a UserAuth object into USERCOOKIES"""
     randomstring = token_urlsafe(16)
     userauth = UserAuth(user,time.time())
@@ -127,7 +127,7 @@ def getuserinfo(user:str) -> UserInfo:
 
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
-    cur.execute("SELECT auth, fullname FROM users WHERE name = ?", (user,))
+    cur.execute("SELECT auth, fullname FROM users WHERE username = ?", (user,))
     result = cur.fetchone()
     cur.close()
     con.close()
@@ -202,10 +202,10 @@ def changepassword(user:str, newpassword:str) -> str|None:
     con = sqlite3.connect(USERDBASE)
     with con:
         cur = con.cursor()
-        cur.execute("SELECT count(*) FROM users WHERE name = ?", (user,))
+        cur.execute("SELECT count(*) FROM users WHERE username = ?", (user,))
         result = cur.fetchone()[0]
         if result:
-            cur.execute("UPDATE users SET password = ?, salt = ? WHERE name = ?", (encoded_password, salt, user))
+            cur.execute("UPDATE users SET password = ?, salt = ? WHERE username = ?", (encoded_password, salt, user))
     cur.close()
     con.close()
     if not result:
@@ -224,7 +224,7 @@ def deluser(user:str) -> str|None:
     getuserinfo.cache_clear()
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
-    cur.execute("SELECT auth FROM users WHERE name = ?", (user,))
+    cur.execute("SELECT auth FROM users WHERE username = ?", (user,))
     result = cur.fetchone()
     if not result:
         cur.close()
@@ -238,20 +238,51 @@ def deluser(user:str) -> str|None:
             cur.close()
             con.close()
             return "Cannot delete the only administrator"
-    curs.execute("DELETE FROM users WHERE name = ?", (user,))
+    curs.execute("DELETE FROM users WHERE username = ?", (user,))
     con.commit()
     cur.close()
     con.close()
     # The user is deleted
 
 
-def adduser(user:str, password:str, auth:str) -> str|None:
+def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
     "Checks the user does not already exist, returns None on success, on failure returns an error message"
     if not user:
-        return "No user given"
+        return "No username given"
+    elif len(user)<5:
+        return "New username needs at least 5 characters"
     elif len(password) < 8:
         return "New password needs at least 8 characters"
     elif re.search('[^a-zA-Z0-9]', password) is None:
         return "The password needs at least one special character"
     elif auth != "user" and auth != "admin":
         return "Auth level not recognised"
+
+    con = sqlite3.connect(USERDBASE)
+    cur = con.cursor()
+    cur.execute("SELECT count(*) FROM users WHERE username = ?", (user,))
+    number = cur.fetchone()[0]
+    if number:
+        cur.close()
+        con.close()
+        return "Cannot add, this username already exists"
+
+    # generate and store a random number as salt
+    salt = os.urandom(16)
+
+    # encode the users password
+    encoded_password = scrypt( password = password.encode(),
+                               salt = salt,
+                               n = 2048,
+                               r = 8,
+                               p = 1,
+                               maxmem=0,
+                               dklen=64)
+
+    # store the new user
+    con.execute("INSERT INTO users VALUES(:username, :password, :auth, :salt, :fullname)",
+              {'username':user, 'password':encoded_password, 'auth':auth, 'salt':salt, 'fullname':fullname})
+    con.commit()
+    cur.close()
+    con.close()
+    # The user is added
