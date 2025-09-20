@@ -38,7 +38,7 @@
 
   <div x-show="open" class="w3-container w3-card" style="margin-top:5vh;">
     <p>Set a new full name for: ${user | h}</p>
-    <form hx-post="/edit/fullname" hx-target="#result" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
+    <form hx-post="/edit/fullname" hx-target="#result" hx-swap="outerHTML">
       <p><label for="fullname">Users full name:</label>
         <input class="w3-input" type="text" id="fullname" name="fullname" value="${fullname | h}" required /></p>
       <p class="w3-center">

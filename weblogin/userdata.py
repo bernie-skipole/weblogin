@@ -188,6 +188,8 @@ def newfullname(user:str, newfullname:str) -> str|None:
         cur.execute("UPDATE users SET fullname = ? WHERE username = ?", (newfullname, user))
     cur.close()
     con.close()
+    # clear cache
+    getuserinfo.cache_clear()
 
 
 def changepassword(user:str, newpassword:str) -> str|None:
@@ -230,10 +232,6 @@ def deluser(user:str) -> str|None:
     "Deletes the user, on success returns None, on failure returns an error message"
     if not user:
         return "No user given"
-    # log the user out
-    logoutuser(user)
-    # clear cache
-    getuserinfo.cache_clear()
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
     cur.execute("SELECT auth FROM users WHERE username = ?", (user,))
@@ -250,11 +248,14 @@ def deluser(user:str) -> str|None:
             cur.close()
             con.close()
             return "Cannot delete the only administrator"
-    curs.execute("DELETE FROM users WHERE username = ?", (user,))
+    cur.execute("DELETE FROM users WHERE username = ?", (user,))
     con.commit()
     cur.close()
     con.close()
     # The user is deleted
+    logoutuser(user)
+    # clear cache
+    getuserinfo.cache_clear()
 
 
 def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
@@ -263,6 +264,10 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
         return "No username given"
     elif len(user)<5:
         return "New username needs at least 5 characters"
+    elif not user.isalnum():
+        return "Username must be alphanumeric only"
+    elif len(user)>16:
+        return "New username should be at most 16 characters"
     elif len(password) < 8:
         return "New password needs at least 8 characters"
     elif re.search('[^a-zA-Z0-9]', password) is None:
@@ -271,6 +276,8 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
         return "Auth level not recognised"
     elif not fullname:
         return "A full name is required"
+    elif len(fullname)>30:
+        return "Your full name should be at most 30 characters"
 
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()

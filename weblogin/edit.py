@@ -78,7 +78,13 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
     if message:
         return HTMXTemplate(None,
                         template_str=f"Failed. {message}")
-    return ClientRedirect("/")
+    return ClientRedirect(f"/edit/deleted/{user}")
+
+
+@get("/deleted/{user:str}", exclude_from_auth=True)
+async def deleted(user:str) -> Template:
+    "Render the deleted page"
+    return Template(template_name="deleted.html", context={"user": user})
 
 
 @post("/newuser")
@@ -109,5 +115,6 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    fullname,
                                                    changepwd,
                                                    deluser,
+                                                   deleted,
                                                    newuser
                                                   ])
