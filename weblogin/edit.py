@@ -18,7 +18,7 @@ async def edit(request: Request[str, str, State]) -> Template:
        are available"""
     user = request.user
     auth = request.auth
-    if auth == "User":
+    if auth != "admin":
         return Template(template_name="useredit.html", context={"user": user})
     # or if this user has admin auth
     return Template(template_name="adminedit.html", context={"user": user})
@@ -72,9 +72,9 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
     form_data = await request.form()
     username = form_data.get("username").strip()
     password = form_data.get("password").strip()
-    authlevel = form_data.get("authlevel").strip()
-    # add the new user
-    message = userdata.adduser(username, password, authlevel)
+    authlevel = form_data.get("authlevel").strip().lower()
+    fullname = form_data.get("fullname").strip()
+    message = userdata.adduser(username, password, authlevel, fullname)
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
