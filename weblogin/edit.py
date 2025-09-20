@@ -18,10 +18,31 @@ async def edit(request: Request[str, str, State]) -> Template:
        are available"""
     user = request.user
     auth = request.auth
+    uinfo = userdata.getuserinfo(user)
+    if uinfo is None:
+        # user not recognised, this should never happen, but in the event it does
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    # admin and user auth levels get different templates
     if auth != "admin":
-        return Template(template_name="useredit.html", context={"user": user})
+        return Template(template_name="useredit.html", context={"user": user, "fullname":uinfo.fullname})
     # or if this user has admin auth
-    return Template(template_name="adminedit.html", context={"user": user})
+    return Template(template_name="adminedit.html", context={"user": user, "fullname":uinfo.fullname})
+
+@post("/fullname")
+async def fullname(request: Request[str, str, State]) -> Template:
+    user = request.user
+    form_data = await request.form()
+    newfullname = form_data.get("fullname")
+    message = userdata.newfullname(user, newfullname)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    else:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"result\" style=\"color:green\">Success! Your full name has changed</p>")
+
 
 
 @post("/changepwd")
@@ -85,6 +106,7 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
 
 
 edit_router = Router(path="/edit", route_handlers=[edit,
+                                                   fullname,
                                                    changepwd,
                                                    deluser,
                                                    newuser

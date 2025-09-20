@@ -178,6 +178,18 @@ def logout(cookie:str) -> None:
     del USERCOOKIES[cookie]
 
 
+def newfullname(user:str, newfullname:str) -> str|None:
+    "Sets a new fullname for the user, on success returns None, on failure returns an error message"
+    if not newfullname:
+        return "An empty full name is insufficient"
+    con = sqlite3.connect(USERDBASE)
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE users SET fullname = ? WHERE username = ?", (newfullname, user))
+    cur.close()
+    con.close()
+
+
 def changepassword(user:str, newpassword:str) -> str|None:
     "Sets a new password for the user, on success returns None, on failure returns an error message"
 
@@ -257,6 +269,8 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
         return "The password needs at least one special character"
     elif auth != "user" and auth != "admin":
         return "Auth level not recognised"
+    elif not fullname:
+        return "A full name is required"
 
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
