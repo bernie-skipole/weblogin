@@ -10,7 +10,7 @@
   ${parent.body()}
 
 
-<div x-data="{ open: false }" style="margin-left:auto;width:80%;max-width:400px;margin-right:auto;margin-top:5vh;">
+<div x-data="{ open: false }" style="margin-left:auto;width:80%;max-width:400px;margin-right:auto;margin-top:5vh;margin-bottom:5vh;">
 
   <div>
     <button x-on:click="open=!open" x-text="open ? 'Close' : 'Add a new User'" class="w3-button w3-black w3-ripple w3-round" style="width:100%"></button>
@@ -36,17 +36,45 @@
 
 </div>
 
-<div x-data="{ open: false }">
+
+<div class="w3-panel">
+  <table class="w3-table-all">
+    <tr>
+      <th>Username</th>
+      <th>Full name</th>
+      <th class="w3-center">Choose to Edit this user</th>
+    </tr>
+
+    % for row in users:
+      <tr>
+        % for item in row:
+            <td>${item}</td>
+        % endfor
+        <td class="w3-center"><a href="/edit/edituser/${row[0]}" class="w3-button w3-black w3-ripple w3-round w3-small">Edit</a></td>
+      </tr>
+    % endfor
+
+  </table>
+</div>
 
 
-    <div style="margin-left:auto;width:80%;max-width:400px;margin-right:auto;margin-top:5vh;margin-bottom:5vh;">
+<div class="w3-panel">
 
-      <div>
-        <button x-on:click="open=!open" x-text="open ? 'Close' : 'List Users'"  class="w3-button w3-black w3-ripple w3-round" style="width:100%" hx-post="/edit/listusers" hx-target="#userlist"></button>
-      </div>
+  % if prevpage < thispage:
+   <div class="w3-left">
+  % else:
+   <div class="w3-left w3-hide">
+  % endif
+      <button class="w3-button w3-black w3-ripple w3-round w3-small" hx-get="/edit/userpage/${prevpage}" hx-target="#userlist">Previouse Page ${prevpage+1}</button>
+  </div>
 
-    </div>
 
-    <div id="userlist" class="w3-panel">
-    </div>
+  % if nextpage > thispage:
+   <div class="w3-right">
+  % else:
+   <div class="w3-right w3-hide">
+  % endif
+      <button class="w3-button w3-black w3-ripple w3-round w3-small" hx-get="/edit/userpage/${nextpage}" hx-target="#userlist">Next Page ${nextpage+1}</button>
+  </div>
+
 </div>

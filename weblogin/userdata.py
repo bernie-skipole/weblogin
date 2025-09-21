@@ -309,13 +309,24 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
     # The user is added
 
 
-def userlist(idx:int) -> dict:
-    "Returns a dict of {user:list of usernames , fullname:list of fullnames}"
+def userlist(page:int, numinpage:int = 3) -> dict:
+    """Returns a dict of {user:list of usernames , fullname:list of fullnames , ...plus page information}
+       page is the page number, starting at page 0, numinpage is the number of results in the returned page"""
+    # giving numinpage results per page, calculate the number of lines to skip
+    skip = numinpage*page
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
-    cur.execute("SELECT username, fullname FROM users")
+    cur.execute("SELECT username, fullname FROM users ORDER BY fullname COLLATE NOCASE, username COLLATE NOCASE LIMIT ?, ?", (skip, numinpage))
     users = cur.fetchall()
     cur.close()
     con.close()
-    ulist, flist = list(zip(*users))
-    return {"user":ulist, "fullname":flist}
+    #ulist, flist = list(zip(*users))
+    if len(users) == numinpage:
+        nextpage = page+1
+    else:
+        nextpage = page
+    if page:
+        prevpage = prevpage-1
+    else:
+        prevpage = 0
+    return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page}

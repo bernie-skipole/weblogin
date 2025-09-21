@@ -28,7 +28,13 @@ async def edit(request: Request[str, str, State]) -> Template:
     if auth != "admin":
         return Template(template_name="useredit.html", context={"user": user, "fullname":uinfo.fullname})
     # or if this user has admin auth
-    return Template(template_name="adminedit.html", context={"user": user, "fullname":uinfo.fullname})
+    context = userdata.userlist(0)  # 0 is the start index of the list, gets the first set of users
+    # add further items to this context dictionary
+    context["user"] = user
+    context["fullname"] = uinfo.fullname
+    return Template(template_name="adminedit.html", context=context)
+
+
 
 @post("/fullname")
 async def fullname(request: Request[str, str, State]) -> Template:
@@ -108,20 +114,6 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
     return HTMXTemplate(None,
                 template_str="<p id=\"result\" style=\"color:green\">Success! New user added</p>")
 
-@post("/listusers")
-async def listusers(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
-    "Return a HTMXTemplate with a table of users"
-    if request.auth != "admin":
-        if 'token' in request.cookies:
-            # log the user out
-            userdata.logout(request.cookies['token'])
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    userlist = userdata.userlist(0)  # 0 is the start index of the list, gets the first set of users
-    return HTMXTemplate(template_name="userlist.html", context=userlist)
-
-
 
 
 
@@ -130,6 +122,5 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    changepwd,
                                                    deluser,
                                                    deleted,
-                                                   newuser,
-                                                   listusers
+                                                   newuser
                                                   ])
