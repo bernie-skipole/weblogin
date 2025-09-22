@@ -27,8 +27,11 @@ async def edit(request: Request[str, str, State]) -> Template:
     # admin and user auth levels get different templates
     if auth != "admin":
         return Template(template_name="useredit.html", context={"user": user, "fullname":uinfo.fullname})
-    # or if this user has admin auth
-    context = userdata.userlist(0)  # 0 is the start index of the list, gets the first set of users
+    context = userdata.userlist(request.cookies.get('token', ''))
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
@@ -115,6 +118,43 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
                 template_str="<p id=\"result\" style=\"color:green\">Success! New user added</p>")
 
 
+@get("/prevpage")
+async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    if request.auth != "admin":
+        if 'token' in request.cookies:
+            # log the user out
+            userdata.logout(request.cookies['token'])
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    context = userdata.userlist(request.cookies.get('token', ''), "-")
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return Template(template_name="listusers.html", context=context)
+
+
+@get("/nextpage")
+async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    if request.auth != "admin":
+        if 'token' in request.cookies:
+            # log the user out
+            userdata.logout(request.cookies['token'])
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    context = userdata.userlist(request.cookies.get('token', ''), "+")
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return Template(template_name="listusers.html", context=context)
+
+
+
+
+
 
 
 edit_router = Router(path="/edit", route_handlers=[edit,
@@ -122,5 +162,7 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    changepwd,
                                                    deluser,
                                                    deleted,
-                                                   newuser
+                                                   newuser,
+                                                   prevpage,
+                                                   nextpage
                                                   ])

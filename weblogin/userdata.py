@@ -22,13 +22,17 @@ from functools import lru_cache
 USERDBASE = Path.cwd() / "users.sqlite"
 
 
-# Dictionary of randomstring:userauth, built as cookies are created
-# The randomstring is sent as the cookie token
+# Dictionary of cookie:userauth, built as cookies are created
+# The cookie is a random string sent as the cookie token
 USERCOOKIES = {}
 
 # seconds after which an idle user will be logged out (5 minutes in this example)
 IDLETIMEOUT = 300
 
+
+# UserInfo objects are generally populated from the database, or LRU cache, and used
+# to pass a bundle of user information. Since a cache is used the objects are usually static,
+# and if changed, the cache must be cleared.
 
 @dataclass
 class UserInfo():
@@ -38,11 +42,17 @@ class UserInfo():
     fullname:str
 
 
+# UserAuth objects are created as users are logged in and stored in the USERCOOKIES
+# dictionary, with cookies as the dictionary keys.
+# These store the user associated with the cookie, and can also be used to store any
+# temporary data associated with a particular logged in session.
+
 @dataclass
 class UserAuth():
     "Class used to hold a logged in user details"
-    user:str
-    time:float
+    user:str             # The username
+    time:float           # time used for timing out the session
+    page:int             # admins can see 'pages' of user data, this stores the current page number
 
 
 if not USERDBASE.is_file():
@@ -107,13 +117,11 @@ def checkuserpassword(user:str, password:str) -> UserInfo|None:
     # invalid password, return None
 
 
-def getcookie(user:str) -> str:
+def createcookie(user:str) -> str:
     """Given a user, create and return a cookie string value
-       Also sets a UserAuth object into USERCOOKIES"""
+       Also create and set a UserAuth object into USERCOOKIES"""
     randomstring = token_urlsafe(16)
-    userauth = UserAuth(user,time.time())
-    # record this logged in user in a loggedin dictionary
-    USERCOOKIES[randomstring] = userauth
+    USERCOOKIES[randomstring] = UserAuth(user, time.time(), 0)    # initially page is set to zero
     # The cookie returned will be the random string
     return randomstring
 
@@ -147,11 +155,11 @@ def cleanusercookies() -> None:
             del USERCOOKIES[cookie]
 
 
-def verify(cookie:str) -> UserInfo|None:
-    "Return UserInfo object, or None on failure"
-    if cookie not in USERCOOKIES:
+def getuserauth(cookie:str) -> UserAuth|None:
+    "Return UserAuth object, or None on failure"
+    userauth = USERCOOKIES.get(cookie)
+    if userauth is None:
         return
-    userauth = USERCOOKIES[cookie]
     now = time.time()
     if now-userauth.time > IDLETIMEOUT:
         # log the user out, as IDLETIMEOUT inactivity has passed
@@ -159,8 +167,17 @@ def verify(cookie:str) -> UserInfo|None:
         return
     # success, update the time
     userauth.time = now
+    return userauth
+
+
+def verify(cookie:str) -> UserInfo|None:
+    "Return UserInfo object, or None on failure"
+    userauth = getuserauth(cookie)
+    if userauth is None:
+        return
     # return a UserInfo object
     return getuserinfo(userauth.user)
+
 
 
 def logoutuser(user:str) -> None:
@@ -182,6 +199,8 @@ def newfullname(user:str, newfullname:str) -> str|None:
     "Sets a new fullname for the user, on success returns None, on failure returns an error message"
     if not newfullname:
         return "An empty full name is insufficient"
+    if len(newfullname) > 30:
+        return "A full name should be at most 30 characters"
     con = sqlite3.connect(USERDBASE)
     with con:
         cur = con.cursor()
@@ -309,24 +328,52 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
     # The user is added
 
 
-def userlist(page:int, numinpage:int = 3) -> dict:
-    """Returns a dict of {user:list of usernames , fullname:list of fullnames , ...plus page information}
-       page is the page number, starting at page 0, numinpage is the number of results in the returned page"""
-    # giving numinpage results per page, calculate the number of lines to skip
-    skip = numinpage*page
+
+def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
+    """requestedpage = '' for current page
+                       '-' for previous page
+                       '+' for next page
+       numinpage is the number of results in the returned page
+       Returns a dict of {users:list of [(username, fullname) ... ] for a page, ...plus page information}
+       If cookie not found, returns None"""
+    if not cookie:
+        return
+    userauth = getuserauth(cookie)
+    if userauth is None:
+        return
+    if not numinpage:
+        return
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
+    cur.execute("SELECT count(username) FROM users")
+    number = cur.fetchone()[0]
+    # number is total number of users
+    lastpage = (number - 1) // numinpage
+    # lastpage is the last page to show
+    currentpage = userauth.page
+    if requestedpage == "+" and currentpage < lastpage:
+        page = currentpage + 1
+    elif requestedpage == "-" and currentpage:
+        page = currentpage - 1
+    else:
+        page = currentpage
+    # page is the page number required, starting at page 0
+    # with numinpage results per page, calculate the number of lines to skip
+    skip = numinpage*page
     cur.execute("SELECT username, fullname FROM users ORDER BY fullname COLLATE NOCASE, username COLLATE NOCASE LIMIT ?, ?", (skip, numinpage))
     users = cur.fetchall()
     cur.close()
     con.close()
-    #ulist, flist = list(zip(*users))
-    if len(users) == numinpage:
+    if page<lastpage:
+        # There are further users to come
         nextpage = page+1
     else:
+        # No further users
         nextpage = page
     if page:
-        prevpage = prevpage-1
+        # Not the first page, so previous pages must exist
+        prevpage = page-1
     else:
+        # This is page 0, no previous page
         prevpage = 0
-    return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page}
+    return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page, "lastpage":lastpage, "number":number}

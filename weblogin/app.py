@@ -107,7 +107,7 @@ async def login(request: Request) -> Template|ClientRedirect:
         return HTMXTemplate(None,
                             template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid</p>")
     # The user checks out ok, create a cookie for this user and set redirect to the members page,
-    loggedincookie = userdata.getcookie(userinfo.user)
+    loggedincookie = userdata.createcookie(userinfo.user)
     # redirect with the loggedincookie
     response =  ClientRedirect("/members")
     response.set_cookie(key = 'token', value=loggedincookie)
