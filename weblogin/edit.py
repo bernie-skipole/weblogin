@@ -6,9 +6,7 @@ from litestar.plugins.htmx import HTMXTemplate, ClientRedirect
 from litestar.response import Template, Redirect
 from litestar.datastructures import State
 
-
 from . import userdata
-
 
 
 @get("/")
@@ -38,7 +36,6 @@ async def edit(request: Request[str, str, State]) -> Template:
     return Template(template_name="adminedit.html", context=context)
 
 
-
 @post("/fullname")
 async def fullname(request: Request[str, str, State]) -> Template:
     user = request.user
@@ -59,7 +56,6 @@ async def fullname(request: Request[str, str, State]) -> Template:
             return ClientRedirect("/login")
         return Redirect("/login")
     return HTMXTemplate(template_name="namechanged.html", context=context)
-
 
 
 @post("/changepwd")
@@ -104,15 +100,20 @@ async def deleted(user:str) -> Template:
     return Template(template_name="deleted.html", context={"user": user})
 
 
+def logout(request):
+    "Logs the user out and redirects to the login page"
+    if 'token' in request.cookies:
+        # log the user out
+        userdata.logout(request.cookies['token'])
+    if request.htmx:
+        return ClientRedirect("/login")
+    return Redirect("/login")
+
+
 @post("/newuser")
 async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     if request.auth != "admin":
-        if 'token' in request.cookies:
-            # log the user out
-            userdata.logout(request.cookies['token'])
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+        return logout(request)
     form_data = await request.form()
     username = form_data.get("username").strip()
     password = form_data.get("password").strip()
@@ -134,12 +135,7 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
 @get("/prevpage")
 async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     if request.auth != "admin":
-        if 'token' in request.cookies:
-            # log the user out
-            userdata.logout(request.cookies['token'])
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+        return logout(request)
     context = userdata.userlist(request.cookies.get('token', ''), "-")
     if context is None:
         if request.htmx:
@@ -151,12 +147,7 @@ async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect
 @get("/nextpage")
 async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     if request.auth != "admin":
-        if 'token' in request.cookies:
-            # log the user out
-            userdata.logout(request.cookies['token'])
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+        return logout(request)
     context = userdata.userlist(request.cookies.get('token', ''), "+")
     if context is None:
         if request.htmx:

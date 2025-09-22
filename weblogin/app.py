@@ -156,7 +156,7 @@ app = Litestar(
     exception_handlers={ NotAuthorizedException: gotologin_error_handler},
     plugins=[HTMXPlugin()],
     middleware=[auth_mw],
-    template_config=TemplateConfig(directory=Path(TEMPLATEFILES),
+    template_config=TemplateConfig(directory=TEMPLATEFILES,
                                    engine=MakoTemplateEngine,
                                   ),
     )
