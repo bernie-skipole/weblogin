@@ -357,6 +357,9 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
         page = currentpage - 1
     else:
         page = currentpage
+    if page > lastpage:
+        # this could happen if users have been deleted
+        page = lastpage
     # page is the page number required, starting at page 0
     # with numinpage results per page, calculate the number of lines to skip
     skip = numinpage*page
@@ -364,6 +367,7 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
     users = cur.fetchall()
     cur.close()
     con.close()
+    # get previous page and next page
     if page<lastpage:
         # There are further users to come
         nextpage = page+1
@@ -376,4 +380,6 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
     else:
         # This is page 0, no previous page
         prevpage = 0
-    return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page, "lastpage":lastpage, "number":number}
+    # Update the recorded page in userauth
+    userauth.page = page
+    return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page, "lastpage":lastpage}

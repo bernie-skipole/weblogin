@@ -114,8 +114,13 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    return HTMXTemplate(None,
-                template_str="<p id=\"result\" style=\"color:green\">Success! New user added</p>")
+    # New user added, so update the user list
+    context = userdata.userlist(request.cookies.get('token', ''))
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return HTMXTemplate(template_name="newuser.html", context=context)
 
 
 @get("/prevpage")
@@ -150,9 +155,6 @@ async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect
             return ClientRedirect("/login")
         return Redirect("/login")
     return Template(template_name="listusers.html", context=context)
-
-
-
 
 
 
