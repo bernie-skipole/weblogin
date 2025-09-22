@@ -48,9 +48,17 @@ async def fullname(request: Request[str, str, State]) -> Template:
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    else:
+    # name changed
+    if request.auth != "admin":
         return HTMXTemplate(None,
                         template_str="<p id=\"result\" style=\"color:green\">Success! Your full name has changed</p>")
+    # Update the user list
+    context = userdata.userlist(request.cookies.get('token', ''))
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return HTMXTemplate(template_name="namechanged.html", context=context)
 
 
 
