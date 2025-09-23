@@ -17,15 +17,19 @@
   </div>
 
   <div x-show="open" class="w3-container w3-card" style="margin-top:5vh;">
-    <p>Add a new user</p>
     <form hx-post="/edit/newuser" hx-target="#result" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
       <p><label for="username">New Username:</label>
         <input class="w3-input" type="text" id="username" name="username" required /></p>
       <p><label for="password">New Password:</label>
         <input class="w3-input" type="text" id="password" name="password" required /></p>
-      <p><label for="authlevel">Admin or User:</label>
-        <input class="w3-input" type="text" id="authlevel" name="authlevel" required /></p>
-      <p><label for="fullname">Users full name:</label>
+      <p>Admin or User:</p>
+      <div style="margin-left:20%">
+      <p><input class="w3-radio" type="radio" id="adminauth" name="authlevel" value="Admin" />
+         <label for="adminauth">Admin</label></p>
+      <p><input class="w3-radio" type="radio" id="userauth" name="authlevel" value="User" checked />
+         <label for="userauth">User</label></p>
+      </div>
+      <p><label for="fullname">Full name:</label>
         <input class="w3-input" type="text" id="fullname" name="fullname" required /></p>
       <p class="w3-center">
         <button class="w3-button w3-black w3-ripple w3-round" type="submit">Submit</button></p>

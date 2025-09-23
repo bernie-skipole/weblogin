@@ -363,7 +363,7 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
     # page is the page number required, starting at page 0
     # with numinpage results per page, calculate the number of lines to skip
     skip = numinpage*page
-    cur.execute("SELECT username, fullname FROM users ORDER BY fullname COLLATE NOCASE, username COLLATE NOCASE LIMIT ?, ?", (skip, numinpage))
+    cur.execute("SELECT username, fullname, auth FROM users ORDER BY fullname COLLATE NOCASE, username COLLATE NOCASE LIMIT ?, ?", (skip, numinpage))
     users = cur.fetchall()
     cur.close()
     con.close()
