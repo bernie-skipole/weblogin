@@ -24,7 +24,7 @@ async def edit(request: Request[str, str, State]) -> Template:
         return Redirect("/login")
     # admin and user auth levels get different templates
     if auth != "admin":
-        return Template(template_name="useredit.html", context={"user": user, "fullname":uinfo.fullname})
+        return Template(template_name="youedit.html", context={"user": user, "fullname":uinfo.fullname})
     context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
         if request.htmx:
@@ -156,6 +156,22 @@ async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect
     return Template(template_name="listusers.html", context=context)
 
 
+@get("/edituser/{user:str}")
+async def edituser(user:str, request: Request[str, str, State]) -> Template|Redirect:
+    """This allows an administrator to edit a user"""
+    if request.auth != "admin":
+        return logout(request)
+    uinfo = userdata.getuserinfo(user)
+    if uinfo is None:
+        return Redirect("/")   ### no such user
+
+    context = userdata.userlist(request.cookies.get('token', ''))
+    if context is None:
+        return Redirect("/")
+    # add further items to this context dictionary
+    context["user"] = user
+    context["fullname"] = uinfo.fullname
+    return Template(template_name="adminedit.html", context=context)
 
 
 edit_router = Router(path="/edit", route_handlers=[edit,
@@ -165,5 +181,6 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    deleted,
                                                    newuser,
                                                    prevpage,
-                                                   nextpage
+                                                   nextpage,
+                                                   edituser
                                                   ])
