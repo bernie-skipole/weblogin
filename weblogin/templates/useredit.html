@@ -16,7 +16,7 @@
 
   <div x-show="open" class="w3-container w3-card" style="margin-top:5vh;">
     <p>Change password for user: ${user | h}</p>
-    <form hx-post="/edit/changepwd" hx-target="#result" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
+    <form hx-post="/edit/changepwd" hx-target="#pwdconfirm" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
       <p><label for="oldpassword">Old Password:</label>
         <input class="w3-input" type="password" id="oldpassword" name="oldpassword" required /></p>
       <p><label for="password1">New Password:</label>
@@ -26,7 +26,7 @@
       <p class="w3-center">
         <button class="w3-button w3-black w3-ripple w3-round" type="submit">Submit</button></p>
     </form>
-    <span x-html="open ? '&lt;p id=&quot;result&quot;&gt;&lt;/p&gt;' : '&lt;p&gt;&lt;/p&gt;'"></span>
+    <span x-html="open ? '&lt;p id=&quot;pwdconfirm&quot;&gt;&lt;/p&gt;' : '&lt;p&gt;&lt;/p&gt;'"></span>
   </div>
 
 </div>
@@ -40,13 +40,13 @@
 
   <div x-show="open" class="w3-container w3-card" style="margin-top:5vh;">
     <p>Set a new full name for: ${user | h}</p>
-    <form hx-post="/edit/fullname" hx-target="#result" hx-swap="outerHTML">
+    <form hx-post="/edit/fullname" hx-target="#nameconfirm" hx-swap="outerHTML">
       <p><label for="fullname">Users full name:</label>
         <input class="w3-input" type="text" id="fullname" name="fullname" value="${fullname | h}" required /></p>
       <p class="w3-center">
         <button class="w3-button w3-black w3-ripple w3-round" type="submit">Submit</button></p>
     </form>
-    <span x-html="open ? '&lt;p id=&quot;result&quot;&gt;&lt;/p&gt;' : '&lt;p&gt;&lt;/p&gt;'"></span>
+    <span x-html="open ? '&lt;p id=&quot;nameconfirm&quot;&gt;&lt;/p&gt;' : '&lt;p&gt;&lt;/p&gt;'"></span>
   </div>
 
 </div>

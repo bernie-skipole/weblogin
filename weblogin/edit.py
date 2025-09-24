@@ -44,11 +44,11 @@ async def fullname(request: Request[str, str, State]) -> Template:
     message = userdata.newfullname(user, newfullname)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+                        template_str=f"<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
     # name changed
     if request.auth != "admin":
         return HTMXTemplate(None,
-                        template_str="<p id=\"result\" style=\"color:green\">Success! Your full name has changed</p>")
+                        template_str="<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:green\">Success! Your full name has changed</p>")
     # Update the user list
     context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
@@ -70,17 +70,17 @@ async def changepwd(request: Request[str, str, State]) -> Template:
     if userinfo is None:
         # invalid old password
         return HTMXTemplate(None,
-                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Incorrect old password!</p>")
+                        template_str="<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Incorrect old password!</p>")
     if password1 != password2:
         return HTMXTemplate(None,
-                        template_str="<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
+                        template_str="<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
     message = userdata.changepassword(user, password1)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+                        template_str=f"<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
     else:
         return HTMXTemplate(None,
-                        template_str="<p id=\"result\" style=\"color:green\">Success! Your password has changed</p>")
+                        template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! Your password has changed</p>")
 
 
 @post("/deluser")
@@ -122,7 +122,7 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
     message = userdata.adduser(username, password, authlevel, fullname)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"result\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+                        template_str=f"<p id=\"newuserconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
     # New user added, so update the user list
     context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
