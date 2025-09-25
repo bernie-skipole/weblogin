@@ -153,6 +153,8 @@ async def userdelete(request: Request[str, str, State]) -> Template|ClientRedire
     if message:
         return HTMXTemplate(None,
                         template_str=f"Failed. {message}")
+    if username == request.user:
+        return ClientRedirect(f"/edit/deleted/{username}")
     return ClientRedirect(f"/edit/userdeleted/{username}")
 
 
@@ -235,13 +237,15 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
     uinfo = userdata.getuserinfo(user)
     if uinfo is None:
         return Redirect("/")   ### no such user
-
     context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
         return Redirect("/")
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
+    if user == request.user:
+        # chosen yourself from the table
+        return Template(template_name="adminedit.html", context=context)
     return Template(template_name="edituser.html", context=context)
 
 
