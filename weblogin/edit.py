@@ -58,6 +58,28 @@ async def fullname(request: Request[str, str, State]) -> Template:
     return HTMXTemplate(template_name="namechanged.html", context=context)
 
 
+
+@post("/userfullname")
+async def userfullname(request: Request[str, str, State]) -> Template:
+    if request.auth != "admin":
+        return logout(request)
+    form_data = await request.form()
+    username = form_data.get("username")
+    newfullname = form_data.get("fullname")
+    message = userdata.newfullname(username, newfullname)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    # Update the user list
+    context = userdata.userlist(request.cookies.get('token', ''))
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return HTMXTemplate(template_name="namechanged.html", context=context)
+
+
+
 @post("/changepwd")
 async def changepwd(request: Request[str, str, State]) -> Template:
     user = request.user
@@ -83,8 +105,28 @@ async def changepwd(request: Request[str, str, State]) -> Template:
                         template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! Your password has changed</p>")
 
 
-@post("/deluser")
-async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
+@post("/changeuserpwd")
+async def changeuserpwd(request: Request[str, str, State]) -> Template:
+    if request.auth != "admin":
+        return logout(request)
+    form_data = await request.form()
+    username = form_data.get("username")
+    password1 = form_data.get("password1")
+    password2 = form_data.get("password2")
+    if password1 != password2:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
+    message = userdata.changepassword(username, password1)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    else:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! The password has changed</p>")
+
+
+@post("/delete")
+async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
     "Deletes the user, and redirects"
     user = request.user
     message = userdata.deluser(user)
@@ -98,6 +140,35 @@ async def deluser(request: Request[str, str, State]) -> Template|ClientRedirect:
 async def deleted(user:str) -> Template:
     "Render the deleted page"
     return Template(template_name="deleted.html", context={"user": user})
+
+
+@post("/userdelete")
+async def userdelete(request: Request[str, str, State]) -> Template|ClientRedirect:
+    "Deletes the user, and redirects"
+    if request.auth != "admin":
+        return logout(request)
+    form_data = await request.form()
+    username = form_data.get("username").strip()
+    message = userdata.deluser(username)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"Failed. {message}")
+    return ClientRedirect(f"/edit/userdeleted/{username}")
+
+
+@get("/userdeleted/{user:str}")
+async def userdeleted(user:str, request: Request[str, str, State]) -> Template|ClientRedirect:
+    "Render the userdeleted page"
+    if request.auth != "admin":
+        return logout(request)
+    username = user.strip()
+    context = userdata.userlist(request.cookies.get('token', ''), "-")
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    context['user'] = username
+    return Template(template_name="userdeleted.html", context=context)
 
 
 def logout(request):
@@ -171,14 +242,18 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
-    return Template(template_name="adminedit.html", context=context)
+    return Template(template_name="edituser.html", context=context)
 
 
 edit_router = Router(path="/edit", route_handlers=[edit,
                                                    fullname,
+                                                   userfullname,
                                                    changepwd,
-                                                   deluser,
+                                                   changeuserpwd,
+                                                   delete,
                                                    deleted,
+                                                   userdelete,
+                                                   userdeleted,
                                                    newuser,
                                                    prevpage,
                                                    nextpage,
