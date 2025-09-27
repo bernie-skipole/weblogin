@@ -4,9 +4,9 @@
    You should immediately log in as this user and change the password.
    """
 
-import sqlite3, os, time, re
+import sqlite3, os, time
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from hashlib import scrypt
 
@@ -17,9 +17,6 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from functools import lru_cache
-
-
-TIMEZONE = timezone.utc
 
 
 # set the location of sqlite database as the current working directory
@@ -187,7 +184,6 @@ def verify(cookie:str) -> UserInfo|None:
     return getuserinfo(userauth.user)
 
 
-
 def logoutuser(user:str) -> None:
     "Logs the user out, even if user has multiple sessions open"
     for cookie in list(USERCOOKIES.keys()):
@@ -225,7 +221,7 @@ def changepassword(user:str, newpassword:str) -> str|None:
     if len(newpassword) < 8:
         return "New password needs at least 8 characters"
 
-    if re.search('[^a-zA-Z0-9]', newpassword) is None:
+    if newpassword.isalnum():
         return "New password needs at least one special character"
 
     # generate and store a random number as salt
@@ -297,7 +293,7 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
         return "New username should be at most 16 characters"
     elif len(password) < 8:
         return "New password needs at least 8 characters"
-    elif re.search('[^a-zA-Z0-9]', password) is None:
+    elif password.isalnum():
         return "The password needs at least one special character"
     elif auth != "user" and auth != "admin":
         return "Auth level not recognised"
@@ -396,7 +392,7 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
 def dbbackup() -> str|None:
     "Create database backup file, return the file name, or None on failure"
 
-    backupfilename = datetime.now(tz=TIMEZONE).strftime('%Y%m%d_%H%M%S') + ".sqlite"
+    backupfilename = datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S') + ".sqlite"
     backupfilepath = USERDBASE_LOCATION / backupfilename
 
     try:

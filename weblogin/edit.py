@@ -1,4 +1,6 @@
-
+"""
+Handles all routes beneath /edit
+"""
 
 
 from litestar import Litestar, get, post, Request, Router
@@ -173,7 +175,7 @@ async def userdeleted(user:str, request: Request[str, str, State]) -> Template|C
     return Template(template_name="userdeleted.html", context=context)
 
 
-def logout(request):
+def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
     "Logs the user out and redirects to the login page"
     if 'token' in request.cookies:
         # log the user out
@@ -251,17 +253,16 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
 
 @get("/backupdb")
 async def backupdb(request: Request[str, str, State]) -> Template|Redirect:
-    """This allows an administrator to edit a user"""
+    """This creates a backup file of the user database"""
     if request.auth != "admin":
         return logout(request)
+    # userdata.dbbackup() actuall does the work
     filename = userdata.dbbackup()
     if filename:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"backupfile\" style=\"color:green\" class=\"w3-animate-right\">Backup file created: {filename}</p>")
     return HTMXTemplate(None,
                         template_str="<p id=\"backupfile\"  style=\"color:red\" class=\"w3-animate-right\">Backup failed!</p>")
-
-
 
 
 edit_router = Router(path="/edit", route_handlers=[edit,
