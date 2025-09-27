@@ -6,6 +6,8 @@
 
 import sqlite3, os, time, re
 
+from datetime import datetime, timezone, timedelta
+
 from hashlib import scrypt
 
 from secrets import token_urlsafe
@@ -17,9 +19,15 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 
+TIMEZONE = timezone.utc
+
+
 # set the location of sqlite database as the current working directory
 # this database will hold users and their hashed passwords
-USERDBASE = Path.cwd() / "users.sqlite"
+
+USERDBASE_LOCATION = Path.cwd()
+
+USERDBASE = USERDBASE_LOCATION / "users.sqlite"
 
 
 # Dictionary of cookie:userauth, built as cookies are created
@@ -383,3 +391,19 @@ def userlist(cookie:str, requestedpage:str="", numinpage:int = 20) -> dict|None:
     # Update the recorded page in userauth
     userauth.page = page
     return {"users":users, "nextpage":nextpage, "prevpage":prevpage, "thispage":page, "lastpage":lastpage}
+
+
+def dbbackup() -> str|None:
+    "Create database backup file, return the file name, or None on failure"
+
+    backupfilename = datetime.now(tz=TIMEZONE).strftime('%Y%m%d_%H%M%S') + ".sqlite"
+    backupfilepath = USERDBASE_LOCATION / backupfilename
+
+    try:
+        con = sqlite3.connect(USERDBASE)
+        with con:
+            con.execute("VACUUM INTO ?", (str(backupfilepath),))
+        con.close()
+    except Exception:
+        return
+    return backupfilename

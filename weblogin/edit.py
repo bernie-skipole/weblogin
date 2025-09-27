@@ -249,6 +249,21 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
     return Template(template_name="edituser.html", context=context)
 
 
+@get("/backupdb")
+async def backupdb(request: Request[str, str, State]) -> Template|Redirect:
+    """This allows an administrator to edit a user"""
+    if request.auth != "admin":
+        return logout(request)
+    filename = userdata.dbbackup()
+    if filename:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"backupfile\" style=\"color:green\" class=\"w3-animate-right\">Backup file created: {filename}</p>")
+    return HTMXTemplate(None,
+                        template_str="<p id=\"backupfile\"  style=\"color:red\" class=\"w3-animate-right\">Backup failed!</p>")
+
+
+
+
 edit_router = Router(path="/edit", route_handlers=[edit,
                                                    fullname,
                                                    userfullname,
@@ -261,5 +276,6 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    newuser,
                                                    prevpage,
                                                    nextpage,
-                                                   edituser
+                                                   edituser,
+                                                   backupdb
                                                   ])
