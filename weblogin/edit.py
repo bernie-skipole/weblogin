@@ -170,7 +170,7 @@ async def userdeleted(user:str, request: Request[str, str, State]) -> Template|C
     if request.auth != "admin":
         return logout(request)
     username = user.strip()
-    context = userdata.userlist(request.cookies.get('token', ''), "-")
+    context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
         if request.htmx:
             return ClientRedirect("/login")
