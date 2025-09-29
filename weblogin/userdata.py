@@ -1,4 +1,4 @@
-"""This module defines users and password on a database,
+"""This module defines users and passwords on a database,
    on first being imported if the file users.sqlite does not exist, an
    sqlite database will be created with the single user 'admin' and password 'password!'
    You should immediately log in as this user and change the password.

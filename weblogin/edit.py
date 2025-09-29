@@ -40,6 +40,7 @@ async def edit(request: Request[str, str, State]) -> Template:
 
 @post("/fullname")
 async def fullname(request: Request[str, str, State]) -> Template:
+    "A user is changing his own full name"
     user = request.user
     form_data = await request.form()
     newfullname = form_data.get("fullname")
@@ -63,6 +64,7 @@ async def fullname(request: Request[str, str, State]) -> Template:
 
 @post("/userfullname")
 async def userfullname(request: Request[str, str, State]) -> Template:
+    "An administrator is changing someone else's name, hence get username from the form"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -84,6 +86,7 @@ async def userfullname(request: Request[str, str, State]) -> Template:
 
 @post("/changepwd")
 async def changepwd(request: Request[str, str, State]) -> Template:
+    "A user is changing his own password"
     user = request.user
     form_data = await request.form()
     oldpassword = form_data.get("oldpassword")
@@ -109,6 +112,7 @@ async def changepwd(request: Request[str, str, State]) -> Template:
 
 @post("/changeuserpwd")
 async def changeuserpwd(request: Request[str, str, State]) -> Template:
+    "An administrator is changing someone else's password, hence get username from the form"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -129,7 +133,7 @@ async def changeuserpwd(request: Request[str, str, State]) -> Template:
 
 @post("/delete")
 async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Deletes the user, and redirects"
+    "A user is deleting himself"
     user = request.user
     message = userdata.deluser(user)
     if message:
@@ -140,13 +144,13 @@ async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
 
 @get("/deleted/{user:str}", exclude_from_auth=True)
 async def deleted(user:str) -> Template:
-    "Render the deleted page"
+    "Render the deleted page, showing the users name"
     return Template(template_name="deleted.html", context={"user": user})
 
 
 @post("/userdelete")
 async def userdelete(request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Deletes the user, and redirects"
+    "An administrator is deleting someone else, hence get username from the form"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -162,7 +166,7 @@ async def userdelete(request: Request[str, str, State]) -> Template|ClientRedire
 
 @get("/userdeleted/{user:str}")
 async def userdeleted(user:str, request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Render the userdeleted page"
+    "Having deleted a user, give the reply and update the table of users"
     if request.auth != "admin":
         return logout(request)
     username = user.strip()
@@ -176,7 +180,7 @@ async def userdeleted(user:str, request: Request[str, str, State]) -> Template|C
 
 
 def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
-    "Logs the user out and redirects to the login page"
+    "Logs the session, from cookie, out and redirects to the login page"
     if 'token' in request.cookies:
         # log the user out
         userdata.logout(request.cookies['token'])
@@ -187,6 +191,7 @@ def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
 
 @post("/newuser")
 async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Create a new user, and on success update the table of users"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -209,6 +214,7 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
 
 @get("/prevpage")
 async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Handle the admin user requesting a previouse page of the user table"
     if request.auth != "admin":
         return logout(request)
     context = userdata.userlist(request.cookies.get('token', ''), "-")
@@ -221,6 +227,7 @@ async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect
 
 @get("/nextpage")
 async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Handle the admin user requesting the next page of the user table"
     if request.auth != "admin":
         return logout(request)
     context = userdata.userlist(request.cookies.get('token', ''), "+")
@@ -233,7 +240,7 @@ async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect
 
 @get("/edituser/{user:str}")
 async def edituser(user:str, request: Request[str, str, State]) -> Template|Redirect:
-    """This allows an administrator to edit a user"""
+    """A user to edit has been selected from the table"""
     if request.auth != "admin":
         return logout(request)
     uinfo = userdata.getuserinfo(user)

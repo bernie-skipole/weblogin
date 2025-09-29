@@ -1,5 +1,10 @@
 
-## adduser.html
+## adduser.html - This creates the 'Add a new User' button and form, visible to administrators.
+
+## The button toggles between 'Close' and 'Add a new User' legends, and makes the form visible or not
+## The form posts to /edit/newuser, and result text replaces id newuserconfirm
+## The newuserconfirm paragraph is deleted on button close, and remade when it opens, ready for the next user.
+
 
 <div x-data="{ open: false }" style="margin-left:auto;width:80%;max-width:400px;margin-right:auto;margin-top:5vh;margin-bottom:5vh;">
 

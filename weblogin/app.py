@@ -1,3 +1,10 @@
+"""
+Creates the main litestar app with the top level routes
+and authentication functions, including setting and testing cookies
+
+Note, edit routes are set under edit.edit_router
+
+"""
 
 import asyncio
 
