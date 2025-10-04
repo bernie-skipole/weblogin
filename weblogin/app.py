@@ -89,7 +89,7 @@ async def publicroot() -> Template:
 @get("/login", exclude_from_auth=True)
 async def login_page() -> Template:
     "Render the login page"
-    return Template("login.html")
+    return Template("edit/login.html")
 
 
 @post("/login", exclude_from_auth=True)
@@ -147,7 +147,7 @@ async def logout(request: Request[str, str, State]) -> Template:
         return
     # log the user out
     userdata.logout(request.cookies['token'])
-    return Template("loggedout.html")
+    return Template("edit/loggedout.html")
 
 
 # Initialize the Litestar app with a Mako template engine and register the routes

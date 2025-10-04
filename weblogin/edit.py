@@ -26,7 +26,7 @@ async def edit(request: Request[str, str, State]) -> Template:
         return Redirect("/login")
     # admin and user auth levels get different templates
     if auth != "admin":
-        return Template(template_name="youedit.html", context={"user": user, "fullname":uinfo.fullname})
+        return Template(template_name="edit/youedit.html", context={"user": user, "fullname":uinfo.fullname})
     context = userdata.userlist(request.cookies.get('token', ''))
     if context is None:
         if request.htmx:
@@ -35,7 +35,7 @@ async def edit(request: Request[str, str, State]) -> Template:
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
-    return Template(template_name="adminedit.html", context=context)
+    return Template(template_name="edit/adminedit.html", context=context)
 
 
 @post("/fullname")
@@ -58,7 +58,7 @@ async def fullname(request: Request[str, str, State]) -> Template:
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-    return HTMXTemplate(template_name="namechanged.html", context=context)
+    return HTMXTemplate(template_name="edit/namechanged.html", context=context)
 
 
 
@@ -80,7 +80,7 @@ async def userfullname(request: Request[str, str, State]) -> Template:
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-    return HTMXTemplate(template_name="namechanged.html", context=context)
+    return HTMXTemplate(template_name="edit/namechanged.html", context=context)
 
 
 
@@ -145,7 +145,7 @@ async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
 @get("/deleted/{user:str}", exclude_from_auth=True)
 async def deleted(user:str) -> Template:
     "Render the deleted page, showing the users name"
-    return Template(template_name="deleted.html", context={"user": user})
+    return Template(template_name="edit/deleted.html", context={"user": user})
 
 
 @post("/userdelete")
@@ -176,7 +176,7 @@ async def userdeleted(user:str, request: Request[str, str, State]) -> Template|C
             return ClientRedirect("/login")
         return Redirect("/login")
     context['user'] = username
-    return Template(template_name="userdeleted.html", context=context)
+    return Template(template_name="edit/userdeleted.html", context=context)
 
 
 def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
@@ -209,7 +209,7 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-    return HTMXTemplate(template_name="newuser.html", context=context)
+    return HTMXTemplate(template_name="edit/newuser.html", context=context)
 
 
 @get("/prevpage")
@@ -222,7 +222,7 @@ async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-    return Template(template_name="listusers.html", context=context)
+    return Template(template_name="edit/listusers.html", context=context)
 
 
 @get("/nextpage")
@@ -235,7 +235,7 @@ async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect
         if request.htmx:
             return ClientRedirect("/login")
         return Redirect("/login")
-    return Template(template_name="listusers.html", context=context)
+    return Template(template_name="edit/listusers.html", context=context)
 
 
 @get("/edituser/{user:str}")
@@ -254,8 +254,8 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
     context["fullname"] = uinfo.fullname
     if user == request.user:
         # chosen yourself from the table
-        return Template(template_name="adminedit.html", context=context)
-    return Template(template_name="edituser.html", context=context)
+        return Template(template_name="edit/adminedit.html", context=context)
+    return Template(template_name="edit/edituser.html", context=context)
 
 
 @get("/backupdb")
