@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+## userdeleted.html
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Deleted</title>
+<link rel="stylesheet" href="/static/w3.css">
+<link rel="stylesheet" href="/static/w3-colors-flat.css">
+<script src="/static/htmx.min.js"></script>
+<script src="/static/alpinejs.min.js" defer></script>
+
+<body class="w3-flat-clouds">
+
+  <header class="w3-container w3-flat-silver w3-block">
+    <p class="w3-margin-right w3-left"><a href="/" class="w3-button w3-black w3-ripple w3-round w3-medium">Site Root</a></p>
+    <h3>Site title - edit the userdeleted template to set this</h3>
+  </header>
+
+  <div class="w3-content" style="max-width:400px;margin-top:8vh">
+    <div class="w3-container w3-card">
+      <h2 class="w3-center">Account : ${user|h} has been deleted</h2>
+    </div>
+  </div>
+
+</body>
+</html>

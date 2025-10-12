@@ -8,11 +8,38 @@ from litestar.plugins.htmx import HTMXTemplate, ClientRedirect
 from litestar.response import Template, Redirect
 from litestar.datastructures import State
 
+from litestar.response import ServerSentEvent, ServerSentEventMessage
+
 from . import userdata
 
 
+
+##################
+
+class TableChange:
+    """Iterate whenever a user table change happens."""
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        "Whenever there is a new table event, return a ServerSentEventMessage"
+        await userdata.TABLE_EVENT.wait()
+        return ServerSentEventMessage(event="tablechange")
+
+
+# SSE Handler
+@get(path="/tablechange", sync_to_thread=False)
+def tablechange(request: Request[str, str, State]) -> ServerSentEvent:
+    return ServerSentEvent(TableChange())
+
+
+#################
+
+
+
 @get("/")
-async def edit(request: Request[str, str, State]) -> Template:
+async def edit(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     """This allows a user to edit his/her password, or delete themself from the system
        If the user is an admin user, further facilities to add/delete/reset other users
        are available"""
@@ -26,8 +53,11 @@ async def edit(request: Request[str, str, State]) -> Template:
         return Redirect("/login")
     # admin and user auth levels get different templates
     if auth != "admin":
-        return Template(template_name="edit/youedit.html", context={"user": user, "fullname":uinfo.fullname})
-    context = userdata.userlist(request.cookies.get('token', ''))
+        return Template(template_name="edit/user/useredit.html", context={"user": user, "fullname":uinfo.fullname})
+    # So the user is an administrator, show further buttons
+    # plus a table of users
+    thispage = 0
+    context = userdata.userlist(thispage)
     if context is None:
         if request.htmx:
             return ClientRedirect("/login")
@@ -35,12 +65,14 @@ async def edit(request: Request[str, str, State]) -> Template:
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
-    return Template(template_name="edit/adminedit.html", context=context)
+    return Template(template_name="edit/admin/adminedit.html", context=context)
 
 
-@post("/fullname")
-async def fullname(request: Request[str, str, State]) -> Template:
-    "A user is changing his own full name"
+@post("/adminfullname")
+async def adminfullname(request: Request[str, str, State]) -> Template:
+    "An administrator is changing his own full name"
+    if request.auth != "admin":
+        return logout(request)
     user = request.user
     form_data = await request.form()
     newfullname = form_data.get("fullname")
@@ -48,17 +80,10 @@ async def fullname(request: Request[str, str, State]) -> Template:
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    # name changed
-    if request.auth != "admin":
-        return HTMXTemplate(None,
-                        template_str="<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:green\">Success! Your full name has changed</p>")
-    # Update the user list
-    context = userdata.userlist(request.cookies.get('token', ''))
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    return HTMXTemplate(template_name="edit/namechanged.html", context=context)
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
+    return HTMXTemplate(None,
+                        template_str="<p id=\"nameconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! The name has changed</p>")
 
 
 
@@ -74,15 +99,36 @@ async def userfullname(request: Request[str, str, State]) -> Template:
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    # Update the user list
-    context = userdata.userlist(request.cookies.get('token', ''))
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    return HTMXTemplate(template_name="edit/namechanged.html", context=context)
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
+    return HTMXTemplate(None,
+                        template_str="<p id=\"nameconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! The name has changed</p>")
 
 
+
+@post("/changeuserpwd")
+async def changeuserpwd(request: Request[str, str, State]) -> Template:
+    "An administrator is changing someone else's password, hence get username from the form"
+    if request.auth != "admin":
+        return logout(request)
+    form_data = await request.form()
+    username = form_data.get("username")
+    password1 = form_data.get("password1")
+    password2 = form_data.get("password2")
+    if password1 != password2:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
+    message = userdata.changepassword(username, password1)
+    if message:
+        return HTMXTemplate(None,
+                        template_str=f"<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    else:
+        return HTMXTemplate(None,
+                        template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! The password has changed</p>")
+
+
+
+######### Called by a user to edit himself
 
 @post("/changepwd")
 async def changepwd(request: Request[str, str, State]) -> Template:
@@ -110,28 +156,23 @@ async def changepwd(request: Request[str, str, State]) -> Template:
                         template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! Your password has changed</p>")
 
 
-@post("/changeuserpwd")
-async def changeuserpwd(request: Request[str, str, State]) -> Template:
-    "An administrator is changing someone else's password, hence get username from the form"
-    if request.auth != "admin":
-        return logout(request)
+@post("/fullname")
+async def fullname(request: Request[str, str, State]) -> Template:
+    "A user is changing his own full name"
+    user = request.user
     form_data = await request.form()
-    username = form_data.get("username")
-    password1 = form_data.get("password1")
-    password2 = form_data.get("password2")
-    if password1 != password2:
-        return HTMXTemplate(None,
-                        template_str="<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. Passwords do not match!</p>")
-    message = userdata.changepassword(username, password1)
+    newfullname = form_data.get("fullname")
+    message = userdata.newfullname(user, newfullname)
     if message:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"pwdconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    else:
-        return HTMXTemplate(None,
-                        template_str="<p id=\"pwdconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! The password has changed</p>")
+                        template_str=f"<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
+    # name changed
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
+    return HTMXTemplate(None,
+                 template_str="<p id=\"nameconfirm\" class=\"w3-animate-right\" style=\"color:green\">Success! Your full name has changed</p>")
 
-
-@post("/delete")
+@get("/delete")
 async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
     "A user is deleting himself"
     user = request.user
@@ -139,13 +180,17 @@ async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
     if message:
         return HTMXTemplate(None,
                         template_str=f"Failed. {message}")
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
     return ClientRedirect(f"/edit/deleted/{user}")
 
 
 @get("/deleted/{user:str}", exclude_from_auth=True)
 async def deleted(user:str) -> Template:
-    "Render the deleted page, showing the users name"
-    return Template(template_name="edit/deleted.html", context={"user": user})
+    "Render the deleted page, showing the users name, with account deleted message"
+    return Template(template_name="edit/user/userdeleted.html", context={"user": user})
+
+##################################################
 
 
 @post("/userdelete")
@@ -161,26 +206,21 @@ async def userdelete(request: Request[str, str, State]) -> Template|ClientRedire
                         template_str=f"Failed. {message}")
     if username == request.user:
         return ClientRedirect(f"/edit/deleted/{username}")
-    return ClientRedirect(f"/edit/userdeleted/{username}")
+    return ClientRedirect(f"/edit/userdeleted/{username}")   ###########  awkward, user buttons have to go
 
 
 @get("/userdeleted/{user:str}")
 async def userdeleted(user:str, request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Having deleted a user, give the reply and update the table of users"
+    "Having deleted a user, give the reply"
     if request.auth != "admin":
         return logout(request)
     username = user.strip()
-    context = userdata.userlist(request.cookies.get('token', ''))
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    context['user'] = username
-    return Template(template_name="edit/userdeleted.html", context=context)
+    context = {'user': username}
+    return Template(template_name="edit/userdeleted.html", context=context)   ###########  awkward, user buttons have to go
 
 
 def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
-    "Logs the session, from cookie, out and redirects to the login page"
+    "Logs the session out and redirects to the login page"
     if 'token' in request.cookies:
         # log the user out
         userdata.logout(request.cookies['token'])
@@ -191,7 +231,7 @@ def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
 
 @post("/newuser")
 async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
-    "Create a new user, and on success update the table of users"
+    "Create a new user"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -203,39 +243,12 @@ async def newuser(request: Request[str, str, State]) -> Template|ClientRedirect|
     if message:
         return HTMXTemplate(None,
                         template_str=f"<p id=\"newuserconfirm\" class=\"w3-animate-right\" style=\"color:red\">Invalid. {message}</p>")
-    # New user added, so update the user list
-    context = userdata.userlist(request.cookies.get('token', ''))
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    return HTMXTemplate(template_name="edit/newuser.html", context=context)
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
+    return HTMXTemplate(None,
+                    template_str="<p id=\"newuserconfirm\" style=\"color:green\" class=\"w3-animate-right\">Success! New user added</p>")
 
 
-@get("/prevpage")
-async def prevpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
-    "Handle the admin user requesting a previouse page of the user table"
-    if request.auth != "admin":
-        return logout(request)
-    context = userdata.userlist(request.cookies.get('token', ''), "-")
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    return Template(template_name="edit/listusers.html", context=context)
-
-
-@get("/nextpage")
-async def nextpage(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
-    "Handle the admin user requesting the next page of the user table"
-    if request.auth != "admin":
-        return logout(request)
-    context = userdata.userlist(request.cookies.get('token', ''), "+")
-    if context is None:
-        if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
-    return Template(template_name="edit/listusers.html", context=context)
 
 
 @get("/edituser/{user:str}")
@@ -246,16 +259,13 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
     uinfo = userdata.getuserinfo(user)
     if uinfo is None:
         return Redirect("/")   ### no such user
-    context = userdata.userlist(request.cookies.get('token', ''))
-    if context is None:
-        return Redirect("/")
     # add further items to this context dictionary
-    context["user"] = user
-    context["fullname"] = uinfo.fullname
+    context = {"user": user, "fullname": uinfo.fullname}
     if user == request.user:
-        # chosen yourself from the table
-        return Template(template_name="edit/adminedit.html", context=context)
-    return Template(template_name="edit/edituser.html", context=context)
+        # chosen yourself from the table, options to edit yourself are displayed
+        return HTMXTemplate(template_name="edit/admin/editoptions.html", context=context)
+    # Options to edit a user are chosen
+    return HTMXTemplate(template_name="edit/admin/edituser.html", context=context)
 
 
 @get("/backupdb")
@@ -272,18 +282,62 @@ async def backupdb(request: Request[str, str, State]) -> Template|Redirect:
                         template_str="<p id=\"backupfile\"  style=\"color:red\" class=\"w3-animate-right\">Backup failed!</p>")
 
 
+@get("/tableupdate")
+async def tableupdate(thispage:int, request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Update the table of users"
+    if request.auth != "admin":
+        return logout(request)
+    context = userdata.userlist(thispage)
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return Template(template_name="edit/admin/listusers.html", context=context)
+
+@get("/prevpage")
+async def prevpage(thispage:int, request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Handle the admin user requesting a previouse page of the user table"
+    if request.auth != "admin":
+        return logout(request)
+    context = userdata.userlist(thispage, "-")
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return Template(template_name="edit/admin/listusers.html", context=context)
+
+
+@get("/nextpage")
+async def nextpage(thispage:int, request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
+    "Handle the admin user requesting the next page of the user table"
+    if request.auth != "admin":
+        return logout(request)
+    context = userdata.userlist(thispage, "+")
+    if context is None:
+        if request.htmx:
+            return ClientRedirect("/login")
+        return Redirect("/login")
+    return Template(template_name="edit/admin/listusers.html", context=context)
+
+
+
+
+
 edit_router = Router(path="/edit", route_handlers=[edit,
                                                    fullname,
+                                                   adminfullname,
                                                    userfullname,
                                                    changepwd,
                                                    changeuserpwd,
                                                    delete,
-                                                   deleted,
+                                                #   deleted,
                                                    userdelete,
                                                    userdeleted,
                                                    newuser,
                                                    prevpage,
                                                    nextpage,
                                                    edituser,
-                                                   backupdb
+                                                   backupdb,
+                                                   tablechange,
+                                                   tableupdate
                                                   ])
