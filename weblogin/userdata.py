@@ -209,9 +209,16 @@ def newfullname(user:str, newfullname:str) -> str|None:
     con = sqlite3.connect(USERDBASE)
     with con:
         cur = con.cursor()
-        cur.execute("UPDATE users SET fullname = ? WHERE username = ?", (newfullname, user))
+        cur.execute("SELECT count(*) FROM users WHERE username = ?", (user,))
+        result = cur.fetchone()[0]
+        if result:
+            cur.execute("UPDATE users SET fullname = ? WHERE username = ?", (newfullname, user))
     cur.close()
     con.close()
+    if not result:
+        # invalid user
+        logoutuser(user)
+        return "User not found"
     # clear cache
     getuserinfo.cache_clear()
 
