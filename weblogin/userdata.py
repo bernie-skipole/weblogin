@@ -334,7 +334,7 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
 
 
 
-def userlist(thispage:int, requestedpage:str = "", numinpage:int = 3) -> dict|None:
+def userlist(thispage:int, requestedpage:str = "", numinpage:int = 10) -> dict|None:
     """requestedpage = '' for current page
                        '-' for previous page
                        '+' for next page
