@@ -334,12 +334,12 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
 
 
 
-def userlist(thispage:int, requestedpage:str = "", numinpage:int = 10) -> dict|None:
+def userlist(thispage:int, requestedpage:str = "", numinpage:int = 3) -> dict|None:
     """requestedpage = '' for current page
                        '-' for previous page
                        '+' for next page
        numinpage is the number of results in the returned page
-       Returns a dict of {users:list of [(username, fullname) ... ] for a page, ...plus page information}"""
+       Returns a dict of {users:list of [(username, fullname) ... ] for a page, ...plus pagination information}"""
     if not numinpage:
         return
     con = sqlite3.connect(USERDBASE)

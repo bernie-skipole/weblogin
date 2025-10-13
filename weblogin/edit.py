@@ -195,7 +195,7 @@ async def deleted(user:str) -> Template:
 
 @post("/userdelete")
 async def userdelete(request: Request[str, str, State]) -> Template|ClientRedirect:
-    "An administrator is deleting someone else, hence get username from the form"
+    "An administrator is deleting someone from the table"
     if request.auth != "admin":
         return logout(request)
     form_data = await request.form()
@@ -204,19 +204,11 @@ async def userdelete(request: Request[str, str, State]) -> Template|ClientRedire
     if message:
         return HTMXTemplate(None,
                         template_str=f"Failed. {message}")
+    userdata.TABLE_EVENT.set()
+    userdata.TABLE_EVENT.clear()
     if username == request.user:
         return ClientRedirect(f"/edit/deleted/{username}")
-    return ClientRedirect(f"/edit/userdeleted/{username}")   ###########  awkward, user buttons have to go
-
-
-@get("/userdeleted/{user:str}")
-async def userdeleted(user:str, request: Request[str, str, State]) -> Template|ClientRedirect:
-    "Having deleted a user, give the reply"
-    if request.auth != "admin":
-        return logout(request)
-    username = user.strip()
-    context = {'user': username}
-    return Template(template_name="edit/userdeleted.html", context=context)   ###########  awkward, user buttons have to go
+    return HTMXTemplate(template_name="edit/admin/optionsdelete.html", re_target="#editoptions", context={'user': username})
 
 
 def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
@@ -330,9 +322,8 @@ edit_router = Router(path="/edit", route_handlers=[edit,
                                                    changepwd,
                                                    changeuserpwd,
                                                    delete,
-                                                #   deleted,
+                                                   deleted,
                                                    userdelete,
-                                                   userdeleted,
                                                    newuser,
                                                    prevpage,
                                                    nextpage,
