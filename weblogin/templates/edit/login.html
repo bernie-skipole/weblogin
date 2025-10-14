@@ -11,6 +11,15 @@ html, body {
   height: 100%;
   margin: 0;
   }
+@keyframes fader{ 0%{opacity:1}
+                100%{opacity:0}}
+.vanish {
+  animation-name: fader;
+  animation-duration: 3s;
+  animation-timing-function: ease-in;
+  animation-delay: 2s;
+  animation-fill-mode: forwards;
+}
 </style>
 <link rel="stylesheet" href="/static/w3.css">
 <link rel="stylesheet" href="/static/w3-colors-flat.css">
