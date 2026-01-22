@@ -1,0 +1,16 @@
+@keyframes fader{ 0%{opacity:1}
+                100%{opacity:0}}
+
+
+ /* Fading animation */
+
+
+.vanish {
+  animation-name: fader;
+  animation-duration: 3s;
+  animation-timing-function: ease-in;
+  animation-delay: 2s;
+  animation-fill-mode: forwards;
+}
+
+
