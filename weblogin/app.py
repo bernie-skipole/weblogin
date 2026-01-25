@@ -64,9 +64,13 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
 def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
     """If a NotAuthorizedException is raised, this handles it, and redirects
        the caller to the login page"""
+    if userdata.BASEPATH:
+        redirectpath = userdata.BASEPATH + "login"
+    else:
+        redirectpath = "/login"
     if request.htmx:
-        return ClientRedirect("/login")
-    return Redirect("/login")
+        return ClientRedirect(redirectpath)
+    return Redirect(redirectpath)
 
 
 # This defines LoggedInAuth as middleware and also
@@ -81,8 +85,20 @@ auth_mw = DefineMiddleware(LoggedInAuth, exclude="static")
 # and are not authenticated
 
 @get("/", exclude_from_auth=True)
-async def publicroot() -> Template:
-    "This is the public root page of your site"
+async def publicroot(request: Request) -> ClientRedirect|Redirect:
+    "This is the public root folder of your site"
+    if userdata.BASEPATH:
+        redirectpath = userdata.BASEPATH + "landing"
+    else:
+        redirectpath = "/landing"
+    if request.htmx:
+        return ClientRedirect(redirectpath)
+    return Redirect(redirectpath)
+
+
+@get("/landing", exclude_from_auth=True)
+async def landing() -> Template:
+    "This is the landing page of your site"
     return Template("landing.html")
 
 
@@ -116,7 +132,7 @@ async def login(request: Request) -> Template|ClientRedirect:
     # The user checks out ok, create a cookie for this user and set redirect to the members page,
     loggedincookie = userdata.createcookie(userinfo.user)
     # redirect with the loggedincookie
-    response =  ClientRedirect("/members")
+    response =  ClientRedirect("members")
     response.set_cookie(key = 'token', value=loggedincookie)
     return response
 
@@ -134,8 +150,8 @@ async def members(request: Request[str, str, State]) -> Template|ClientRedirect|
     if uinfo is None:
         # user not recognised, this should never happen, but in the event it does
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("login")
+        return Redirect("login")
     # Return a template which will show your main application
     return Template(template_name="members.html", context={"user": user, "auth": auth, "fullname":uinfo.fullname})
 
@@ -151,8 +167,9 @@ async def logout(request: Request[str, str, State]) -> Template:
 
 
 # Initialize the Litestar app with a Mako template engine and register the routes
-app = Litestar(
+app = Litestar( path = userdata.BASEPATH,
     route_handlers=[publicroot,
+                    landing,
                     login_page,
                     login,
                     logout,

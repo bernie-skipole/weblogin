@@ -18,13 +18,28 @@ from dataclasses import dataclass
 
 from functools import lru_cache
 
+########### set these values as required ###########################################################
 
-# set the location of sqlite database as the current working directory
+# set the location of sqlite database, default set here is the current working directory
 # this database will hold users and their hashed passwords
 
 USERDBASE_LOCATION = Path.cwd()
 
+# This sets the database file name
+
 USERDBASE = USERDBASE_LOCATION / "users.sqlite"
+
+# subdirectory to prepend to links, leave at None if this project is served
+# at the root of a web site. However if it is served beneath a directory such as /instruments/
+# then set this to "/instruments/"
+
+BASEPATH = None
+
+# seconds after which an idle user will be logged out (5 minutes in this example)
+IDLETIMEOUT = 300
+
+####################################################################################################
+
 
 # This event is set whenever the table of users needs updating
 TABLE_EVENT = asyncio.Event()
@@ -33,10 +48,6 @@ TABLE_EVENT = asyncio.Event()
 # Dictionary of cookie:userauth, built as cookies are created
 # The cookie is a random string sent as the cookie token
 USERCOOKIES = {}
-
-# seconds after which an idle user will be logged out (5 minutes in this example)
-IDLETIMEOUT = 300
-
 
 # UserInfo objects are generally populated from the database, or LRU cache, and used
 # to pass a bundle of user information. Since a cache is used the objects are usually static,

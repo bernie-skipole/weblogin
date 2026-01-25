@@ -37,8 +37,20 @@ def tablechange(request: Request[str, str, State]) -> ServerSentEvent:
 #################
 
 
-
 @get("/")
+async def editroot(request: Request) -> ClientRedirect|Redirect:
+    "This is the edit root folder of your site, redirects to the edit page"
+    if userdata.BASEPATH:
+        redirectpath = userdata.BASEPATH + "edit/edit"
+    else:
+        redirectpath = "/edit/edit"
+    if request.htmx:
+        return ClientRedirect(redirectpath)
+    return Redirect(redirectpath)
+
+
+
+@get("/edit")
 async def edit(request: Request[str, str, State]) -> Template|ClientRedirect|Redirect:
     """This allows a user to edit his/her password, or delete themself from the system
        If the user is an admin user, further facilities to add/delete/reset other users
@@ -49,8 +61,8 @@ async def edit(request: Request[str, str, State]) -> Template|ClientRedirect|Red
     if uinfo is None:
         # user not recognised, this should never happen, but in the event it does
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("../login")
+        return Redirect("../login")
     # admin and user auth levels get different templates
     if auth != "admin":
         return Template(template_name="edit/user/useredit.html", context={"user": user, "fullname":uinfo.fullname})
@@ -60,8 +72,8 @@ async def edit(request: Request[str, str, State]) -> Template|ClientRedirect|Red
     context = userdata.userlist(thispage)
     if context is None:
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("../login")
+        return Redirect("../login")
     # add further items to this context dictionary
     context["user"] = user
     context["fullname"] = uinfo.fullname
@@ -182,7 +194,7 @@ async def delete(request: Request[str, str, State]) -> Template|ClientRedirect:
                         template_str=f"Failed. {message}")
     userdata.TABLE_EVENT.set()
     userdata.TABLE_EVENT.clear()
-    return ClientRedirect(f"/edit/deleted/{user}")
+    return ClientRedirect(f"deleted/{user}")
 
 
 @get("/deleted/{user:str}", exclude_from_auth=True)
@@ -207,7 +219,7 @@ async def userdelete(request: Request[str, str, State]) -> Template|ClientRedire
     userdata.TABLE_EVENT.set()
     userdata.TABLE_EVENT.clear()
     if username == request.user:
-        return ClientRedirect(f"/edit/deleted/{username}")
+        return ClientRedirect(f"deleted/{username}")
     return HTMXTemplate(template_name="edit/admin/optionsdelete.html", re_target="#editoptions", context={'user': username})
 
 
@@ -217,8 +229,8 @@ def logout(request: Request[str, str, State]) -> ClientRedirect|Redirect:
         # log the user out
         userdata.logout(request.cookies['token'])
     if request.htmx:
-        return ClientRedirect("/login")
-    return Redirect("/login")
+        return ClientRedirect("../login")
+    return Redirect("../login")
 
 
 @post("/newuser")
@@ -250,7 +262,7 @@ async def edituser(user:str, request: Request[str, str, State]) -> Template|Redi
         return logout(request)
     uinfo = userdata.getuserinfo(user)
     if uinfo is None:
-        return Redirect("/")   ### no such user
+        return Redirect("../")   ### no such user
     # add further items to this context dictionary
     context = {"user": user, "fullname": uinfo.fullname}
     if user == request.user:
@@ -282,8 +294,8 @@ async def tableupdate(thispage:int, request: Request[str, str, State]) -> Templa
     context = userdata.userlist(thispage)
     if context is None:
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("../login")
+        return Redirect("../login")
     return Template(template_name="edit/admin/listusers.html", context=context)
 
 @get("/prevpage")
@@ -294,8 +306,8 @@ async def prevpage(thispage:int, request: Request[str, str, State]) -> Template|
     context = userdata.userlist(thispage, "-")
     if context is None:
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("../login")
+        return Redirect("../login")
     return Template(template_name="edit/admin/listusers.html", context=context)
 
 
@@ -307,15 +319,16 @@ async def nextpage(thispage:int, request: Request[str, str, State]) -> Template|
     context = userdata.userlist(thispage, "+")
     if context is None:
         if request.htmx:
-            return ClientRedirect("/login")
-        return Redirect("/login")
+            return ClientRedirect("../login")
+        return Redirect("../login")
     return Template(template_name="edit/admin/listusers.html", context=context)
 
 
 
 
 
-edit_router = Router(path="/edit", route_handlers=[edit,
+edit_router = Router(path="/edit", route_handlers=[editroot,
+                                                   edit,
                                                    fullname,
                                                    adminfullname,
                                                    userfullname,
