@@ -26,6 +26,8 @@ from functools import lru_cache
 USERDBASE_LOCATION = Path.cwd()
 
 # This sets the database file name
+# If the name is changed, give it an ending
+# of '.sqlite' since this is tested in app.getbackup()
 
 USERDBASE = USERDBASE_LOCATION / "users.sqlite"
 
