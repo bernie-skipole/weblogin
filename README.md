@@ -32,3 +32,5 @@ This is mainly intended to act as an example (and as a record for myself), I wou
 Limitations: As it is originally intended for an instrument control, with few users, it uses a single web worker, an sqlite database to hold user details, and a Python dictionary to hold logged-in users. A database backup button does no more than create a copy of the sqlite database.
 
 The htmx and css files under the static directory should be replaced with later versions of these files from the appropriate projects if they have been updated.
+
+A number of global variables are set under weblogin/userdata.py - these can be changed if required.

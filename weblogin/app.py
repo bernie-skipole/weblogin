@@ -14,13 +14,13 @@ from litestar import Litestar, get, post, Request
 from litestar.plugins.htmx import HTMXPlugin, HTMXTemplate, ClientRedirect
 from litestar.contrib.mako import MakoTemplateEngine
 from litestar.template.config import TemplateConfig
-from litestar.response import Template, Redirect
+from litestar.response import Template, Redirect, File
 from litestar.static_files import create_static_files_router
 from litestar.datastructures import Cookie, State
 
 from litestar.middleware import AbstractAuthenticationMiddleware, AuthenticationResult, DefineMiddleware
 from litestar.connection import ASGIConnection
-from litestar.exceptions import NotAuthorizedException
+from litestar.exceptions import NotAuthorizedException, NotFoundException
 
 from . import userdata, edit
 
@@ -61,7 +61,7 @@ class LoggedInAuth(AbstractAuthenticationMiddleware):
         return AuthenticationResult(user=userinfo.user, auth=userinfo.auth)
 
 
-def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
+def gotologin_error_handler(request: Request, exc: Exception) -> ClientRedirect|Redirect:
     """If a NotAuthorizedException is raised, this handles it, and redirects
        the caller to the login page"""
     if userdata.BASEPATH:
@@ -73,12 +73,30 @@ def gotologin_error_handler(request: Request, exc: Exception) -> Redirect:
     return Redirect(redirectpath)
 
 
-# This defines LoggedInAuth as middleware and also
-# excludes certain paths from authentication.
-# In this case it excludes all routes mounted at or under `/static*`
-# This allows CSS and javascript libraries to be placed there, which
-# therefore do not need authentication to be accessed
-auth_mw = DefineMiddleware(LoggedInAuth, exclude="static")
+def gotonotfound_error_handler(request: Request, exc: Exception) -> ClientRedirect|Redirect:
+    """If a NotFoundException is raised, this handles it, and redirects
+       the caller to the not found page"""
+    if userdata.BASEPATH:
+        redirectpath = userdata.BASEPATH + "notfound"
+    else:
+        redirectpath = "/notfound"
+    if request.htmx:
+        return ClientRedirect(redirectpath)
+    return Redirect(redirectpath)
+
+
+@get("/notfound", exclude_from_auth=True, sync_to_thread=False )
+def notfound(request: Request) -> Template:
+    "This is the not found page of your site"
+    # Check if user is logged in
+    loggedin = False
+    cookie = request.cookies.get('token', '')
+    if cookie:
+        userauth = userdata.getuserauth(cookie)
+        if userauth is not None:
+            loggedin = True
+    return Template("notfound.html", context={"loggedin":loggedin})
+
 
 
 # Note, all routes with 'exclude_from_auth=True' do not have cookie checked
@@ -166,18 +184,53 @@ async def logout(request: Request[str, str, State]) -> Template:
     return Template("edit/loggedout.html")
 
 
+@get("/getbackup/{backupfile:str}", media_type="application/octet", sync_to_thread=False )
+def getbackup(backupfile:str, request: Request[str, str, State]) -> File:
+    "Download a backup file to the browser client"
+    auth = request.auth
+    if auth != "admin":
+        raise NotAuthorizedException()
+    if backupfile.startswith("."):
+        raise NotFoundException()
+    backupfolder = userdata.USERDBASE_LOCATION
+    if not backupfolder:
+        raise NotFoundException()
+    if backupfile == userdata.USERDBASE.name:
+        # do not allow download of current database
+        raise NotFoundException()
+    if not backupfile.endswith(".sqlite"):
+        raise NotFoundException()
+    backuppath = backupfolder / backupfile
+    if not backuppath.is_file():
+        raise NotFoundException()
+    return File(
+        path=backuppath,
+        filename=backupfile
+        )
+
+
+# This defines LoggedInAuth as middleware and also
+# excludes certain paths from authentication.
+# In this case it excludes all routes mounted at or under `/static*`
+# This allows CSS and javascript libraries to be placed there, which
+# therefore do not need authentication to be accessed
+auth_mw = DefineMiddleware(LoggedInAuth, exclude="static")
+
+
 # Initialize the Litestar app with a Mako template engine and register the routes
 app = Litestar( path = userdata.BASEPATH,
     route_handlers=[publicroot,
                     landing,
+                    notfound,
                     login_page,
                     login,
                     logout,
+                    getbackup,
                     edit.edit_router,     # This router in edit.py deals with routes below /edit
                     members,
                     create_static_files_router(path="/static", directories=[STATICFILES]),
                    ],
-    exception_handlers={ NotAuthorizedException: gotologin_error_handler},
+    exception_handlers={ NotAuthorizedException: gotologin_error_handler, NotFoundException: gotonotfound_error_handler},
     plugins=[HTMXPlugin()],
     middleware=[auth_mw],
     template_config=TemplateConfig(directory=TEMPLATEFILES,

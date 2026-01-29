@@ -277,11 +277,11 @@ async def backupdb(request: Request[str, str, State]) -> Template|Redirect:
     """This creates a backup file of the user database"""
     if request.auth != "admin":
         return logout(request)
-    # userdata.dbbackup() actuall does the work
+    # userdata.dbbackup() does the work of creating the backup file
     filename = userdata.dbbackup()
     if filename:
         return HTMXTemplate(None,
-                        template_str=f"<p id=\"backupfile\" style=\"color:green\" class=\"w3-animate-right\">Backup file created: {filename}</p>")
+                        template_str="<p id=\"backupfile\" style=\"color:green\" class=\"w3-animate-right\">Backup file created: <a href=\"../getbackup/${filename|h}\">${filename|h}</a></p>", context={"filename":filename})
     return HTMXTemplate(None,
                         template_str="<p id=\"backupfile\"  style=\"color:red\" class=\"w3-animate-right\">Backup failed!</p>")
 
