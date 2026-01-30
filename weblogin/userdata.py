@@ -20,8 +20,8 @@ from functools import lru_cache
 
 ########### set these values as required ###########################################################
 
-# set the location of sqlite database, default set here is the current working directory
-# this database will hold users and their hashed passwords
+# set the location of sqlite database, the value set here is the current working directory.
+# This database will hold users and their hashed passwords
 
 USERDBASE_LOCATION = Path.cwd()
 
@@ -31,14 +31,21 @@ USERDBASE_LOCATION = Path.cwd()
 
 USERDBASE = USERDBASE_LOCATION / "users.sqlite"
 
-# subdirectory to prepend to links, leave at None if this project is served
-# at the root of a web site. However if it is served beneath a directory such as /instruments/
-# then set this to "/instruments/"
+# subdirectory to prepend to links, leave at None if this project is served at the
+# root of a web site. However if it is served beneath a directory such as /instruments/
+# then set this to "/instruments/". Be sure to include lead and trailing '/' characters.
 
 BASEPATH = None
 
 # seconds after which an idle user will be logged out (5 minutes in this example)
+
 IDLETIMEOUT = 300
+
+# Setting the variable 'SECURECOOKIE' to 'True' enforces cookies will only be sent by
+# browsers over https, unless the connection is to 'localhost'. This is set to False as
+# default so initial development can be done without a reverse proxy and certificates.
+
+SECURECOOKIE = False
 
 ####################################################################################################
 

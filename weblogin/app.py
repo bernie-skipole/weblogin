@@ -151,7 +151,10 @@ async def login(request: Request) -> Template|ClientRedirect:
     loggedincookie = userdata.createcookie(userinfo.user)
     # redirect with the loggedincookie
     response =  ClientRedirect("members")
-    response.set_cookie(key = 'token', value=loggedincookie)
+    if userdata.SECURECOOKIE:
+        response.set_cookie(key = 'token', value=loggedincookie, httponly=True, secure=True)
+    else:
+        response.set_cookie(key = 'token', value=loggedincookie, httponly=True, secure=False)
     return response
 
 
