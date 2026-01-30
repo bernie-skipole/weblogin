@@ -1,7 +1,7 @@
 # weblogin
 An example web site with user login, using litestar, htmx, mako and w3.css
 
-While creating a web control for an instrument, a user login feature was required. Since this may be useful for other projects, the user login and administration was separated and made into this example project. A screenshot is shown below:
+While creating a web control for an instrument, a user login feature was required. Since this may be useful for other projects, the user login and administration facilities were separated and made into this example project. A screenshot is shown below:
 
 ![Terminal screenshot](https://github.com/bernie-skipole/weblogin/raw/main/Screenshot.png)
 
