@@ -1,7 +1,7 @@
 # weblogin
 An example web site with user login, using litestar, htmx, mako and w3.css
 
-While creating a web control for an instrument, a user login feature was required. Since this may be useful for other projects, the user login and administration facilities were separated and made into this example project. A screenshot is shown below:
+A screenshot is shown below:
 
 ![Terminal screenshot](https://github.com/bernie-skipole/weblogin/raw/main/Screenshot.png)
 
@@ -53,3 +53,19 @@ This is mainly intended to act as an example (and as a record for myself).
 The htmx and css files under the static directory should be replaced with later versions of these files from the appropriate projects if they have been updated.
 
 A number of global variables are set under weblogin/userdata.py - these can be changed if required.
+
+Release1
+
+This is the first release, using Mako templates.
+
+The weblogin  creates two classes of users, in which admin users can make more new users.
+
+Users can change their own passwords. Email for forgotten passwords or self registration is not available. 
+
+To install dependencies, use:
+
+pip install litestar[standard]
+
+pip install litestar[mako]
+
+Future: working towards the exact same functionality, but using Jinja templates instead.

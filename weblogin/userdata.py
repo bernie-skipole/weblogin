@@ -60,7 +60,8 @@ USERCOOKIES = {}
 
 # UserInfo objects are generally populated from the database, or LRU cache, and used
 # to pass a bundle of user information. Since a cache is used the objects are usually static,
-# and if changed, the cache must be cleared.
+# and if changed, the cache must be cleared, this is done automatically by the dbase helper
+# functions here, for example newfullname() calls getuserinfo.cache_clear()
 
 @dataclass
 class UserInfo():
@@ -76,7 +77,7 @@ class UserInfo():
 
 @dataclass
 class UserAuth():
-    "Class used to hold a logged in user details"
+    "Class used to hold a logged in username and logged in time"
     user:str             # The username
     time:float           # time used for timing out the session
 
@@ -88,7 +89,7 @@ if not USERDBASE.is_file():
     # generate and store a random number as salt
     salt = os.urandom(16)
 
-    # encode the userpassword
+    # hash the initial 'password!' of the default user
     encoded_password = scrypt( password = 'password!'.encode(),
                                salt = salt,
                                n = 2048,
@@ -119,6 +120,8 @@ def checkuserpassword(user:str, password:str) -> UserInfo|None:
         return
     if len(password)<8:
         return
+    if password.isalnum():
+        return
     con = sqlite3.connect(USERDBASE)
     cur = con.cursor()
     cur.execute("SELECT password,auth,salt,fullname FROM users WHERE username = ?", (user,))
@@ -127,9 +130,8 @@ def checkuserpassword(user:str, password:str) -> UserInfo|None:
     con.close()
     if not result:
         return
-    # encode the received password, and compare it with the value in the database
     storedpassword, auth, salt, fullname = result
-    # hash the received password to compare it with the encoded password
+    # hash the received password to compare it with the hashed password in the database
     receivedpassword = scrypt( password = password.encode(),
                                salt = salt,
                                n = 2048,
@@ -342,7 +344,7 @@ def adduser(user:str, password:str, auth:str, fullname:str) -> str|None:
     # generate and store a random number as salt
     salt = os.urandom(16)
 
-    # encode the users password
+    # hash the users password
     encoded_password = scrypt( password = password.encode(),
                                salt = salt,
                                n = 2048,
